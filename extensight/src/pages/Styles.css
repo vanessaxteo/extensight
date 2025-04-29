@@ -66,3 +66,26 @@
   color: #374151;
   margin-bottom: 6px;
 }
+
+.aiResponseCard {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  margin-top: 24px;
+  font-family: inherit;
+}
+
+.cardTitle {
+  color: #0055ff;
+  font-weight: 600;
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+
+.aiResponseCard p {
+  margin: 8px 0;
+  color: #374151;
+  font-size: 15px;
+}
