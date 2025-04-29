@@ -31,80 +31,95 @@ export default function Assignments() {
         })
 
     }
-    
-    useEffect(() => {
-        const initializeGapiClient = () => {
-          gapi.client.init({
-            discoveryDocs: [
-              "https://sheets.googleapis.com/$discovery/rest?version=v4",
-            ],
-          });
-        }
-        gapi.load("client", initializeGapiClient);
-        
-        let assignments = [];
-        let dueDates = []
-        tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: "189937528489-6nrjdp52eohmoposc8t31ggkts7sk5nr.apps.googleusercontent.com",
-          scope: "https://www.googleapis.com/auth/spreadsheets",
-          callback: (tokenResponse) => {
-            gapi.client.setToken({ access_token: tokenResponse.access_token });
-            Promise.all([
-                gapi.client.sheets.spreadsheets.values
-                .get({
-                    spreadsheetId: "12v_wLKmF0YKMcntS7T7nptQwtk0-aveYySCZQLFQw6k",
-                    range: "Sheet1!A2:A100",
-                }),
-                gapi.client.sheets.spreadsheets.values
-                .get({
-                    spreadsheetId: "12v_wLKmF0YKMcntS7T7nptQwtk0-aveYySCZQLFQw6k",
-                    range: "Sheet1!B2:B100",
-                })
-            ])
-            .then(([res1, res2]) => {
-                assignments = res1.result.values;
-                dueDates = res2.result.values;
-                let newAssignments = [];
-                for (let i = 0; i < assignments.length; i++) {
-                    if (assignments[i] == ""){
-                        break;
-                    }
-                    newAssignments.push({name: assignments[i], due_date: dueDates[i]});
-                }
-                console.log(assignments);
-                setAssignments(newAssignments); 
-            });
 
-           
+    function getData(){
+        let assignments = [];
+        let dueDates = [];
+        Promise.all([
             gapi.client.sheets.spreadsheets.values
             .get({
-                spreadsheetId: "1hkJnKDfxfFiZPLlC43yDiVZdhj1zB6Dy5z1Fh3Z4j0g",
-                range: "Sheet1!A1:J500",
+                spreadsheetId: "12v_wLKmF0YKMcntS7T7nptQwtk0-aveYySCZQLFQw6k",
+                range: "Sheet1!A2:A100",
+            }),
+            gapi.client.sheets.spreadsheets.values
+            .get({
+                spreadsheetId: "12v_wLKmF0YKMcntS7T7nptQwtk0-aveYySCZQLFQw6k",
+                range: "Sheet1!B2:B100",
             })
-            .then((res) => {
-                const data = res.result.values;
-                const rowNames = data[0];
-                const responses = data.slice(1);
-
-                const parsedData = responses.map((response, i) => {
-                    let jsonPArsed = {}
-                    rowNames.forEach((name, i) => {
-                        jsonPArsed[name] = response[i];
-                    })
-                    jsonPArsed["ind"] = i;
-                    return jsonPArsed;
-                });
-
-                setExtensionsData(parsedData);
-                console.log(parsedData);
-                
-            })
-
-            setLoading(false);
-          },
+        ])
+        .then(([res1, res2]) => {
+            assignments = res1.result.values;
+            dueDates = res2.result.values;
+            let newAssignments = [];
+            for (let i = 0; i < assignments.length; i++) {
+                if (assignments[i] == ""){
+                    break;
+                }
+                newAssignments.push({name: assignments[i], due_date: dueDates[i]});
+            }
+            console.log(assignments);
+            setAssignments(newAssignments); 
         });
 
-        tokenClient.requestAccessToken();
+       
+        gapi.client.sheets.spreadsheets.values
+        .get({
+            spreadsheetId: "1hkJnKDfxfFiZPLlC43yDiVZdhj1zB6Dy5z1Fh3Z4j0g",
+            range: "Sheet1!A1:J500",
+        })
+        .then((res) => {
+            const data = res.result.values;
+            const rowNames = data[0];
+            const responses = data.slice(1);
+
+            const parsedData = responses.map((response, i) => {
+                let jsonPArsed = {}
+                rowNames.forEach((name, i) => {
+                    jsonPArsed[name] = response[i];
+                })
+                jsonPArsed["ind"] = i;
+                return jsonPArsed;
+            });
+
+            setExtensionsData(parsedData);
+            console.log(parsedData);
+            
+        })
+
+        setLoading(false);
+    }
+    
+    useEffect(() => {
+        gapi.load("client", async () => {
+            await gapi.client.init({
+                discoveryDocs: [
+                    "https://sheets.googleapis.com/$discovery/rest?version=v4",
+                ],
+            })
+        
+            
+            
+            const storedToken = localStorage.getItem('token');
+            console.log(storedToken);
+            if (storedToken) {
+                gapi.client.setToken({access_token: storedToken});
+                getData();
+            }
+            else {
+                tokenClient = window.google.accounts.oauth2.initTokenClient({
+                    client_id: "189937528489-6nrjdp52eohmoposc8t31ggkts7sk5nr.apps.googleusercontent.com",
+                    scope: "https://www.googleapis.com/auth/spreadsheets",
+                    callback: (tokenResponse) => {
+                    gapi.client.setToken({ access_token: tokenResponse.access_token });
+                    localStorage.setItem('token', tokenResponse.access_token);
+                    getData();
+                    }
+                });
+                tokenClient.requestAccessToken();
+
+            }
+        });
+
         
       }, []);
 
