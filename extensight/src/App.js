@@ -1,22 +1,10 @@
-import './App.css';
+import { Routes, Route } from "react-router-dom";
+import Dashboard from "./pages/dashboard/Dashboard";
 
-function App() {
+export default function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <p>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Routes>
+      <Route path="/*" element={<Dashboard />} />
+    </Routes>
   );
 }
-
-export default App;
