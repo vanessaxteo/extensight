@@ -1,73 +1,63 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Routes, Route, Outlet, Link } from "react-router-dom"; // Import Link for navigation
 import Sidebar from "../components/sidebar/Sidebar";
-import "./Styles.css";
+import Papa from "papaparse";
 
 export default function Students() {
-  const secretKey = process.env.REACT_APP_SECRETKEY;
-  console.log("Loaded API Key:", process.env.REACT_APP_SECRETKEY);
-  const [responseData, setResponseData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [rosterData, setRosterData] = useState([]);
 
-  const fetchAIResponse = async () => {
-    setLoading(true);
-    try {
-      const [rosterRes, extensionsRes, examsRes] = await Promise.all([
-        fetch("/data/roster.csv"),
-        fetch("/data/extensions.csv"),
-        fetch("/data/exam_dates.csv"),
-      ]);
-
-      const [rosterText, extensionsText, examsText] = await Promise.all([
-        rosterRes.text(),
-        extensionsRes.text(),
-        examsRes.text(),
-      ]);
-
-      const res = await fetch("https://noggin.rea.gent/renewed-grouse-2739", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${secretKey}`,
-        },
-        body: JSON.stringify({
-          student_roster: rosterText,
-          extensions: extensionsText,
-          exam_dates: examsText,
-        }),
-      });
-
-      const text = await res.text();
-      const json = JSON.parse(text);
-      setResponseData(json.chat_response);
-    } catch (error) {
-      console.error("AI fetch failed:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetch("/data/roster.csv")
+      .then((response) => response.text())
+      .then((csvText) => {
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const filteredData = results.data.map((row) => ({
+              Name: row["Name"],
+              SID: row["SID"],
+              Email: row["Email address"],
+              UID: row["UID"],
+              Role: row["Role"],
+              Sections: row["Sections"]
+            }));
+            setRosterData(filteredData);
+          },
+        });
+      })
+      .catch((error) => console.error("Error loading CSV:", error));
+  }, []);
 
   return (
-    <div className="dashboard">
+    <div style={{ display: "flex" }}>
       <Sidebar />
-      <main className="mainContent">
-        <h1 className="pageTitle">Students</h1>
-        <button onClick={fetchAIResponse} className="requestButton">
-          Request AI Suggestion
-        </button>
-
-        {loading ? (
-          <p>Loading AI response...</p>
-        ) : responseData ? (
-          <div className="aiResponseCard">
-            <h2 className="cardTitle">Suggested Extension Update</h2>
-            <p><strong>Student Name:</strong> {responseData.student_name}</p>
-            <p><strong>SID:</strong> {responseData.SID}</p>
-            <p><strong>New Date:</strong> {responseData.new_date}</p>
-            <p><strong>Reasoning:</strong> {responseData.reasoning}</p>
-          </div>
-        ) : (
-          <p>No data found. Click the button to get a suggestion.</p>
-        )}
+      <main style={{ flexGrow: 1, padding: "1rem" }}>
+        <h2>Students</h2>
+        <table border="1" cellPadding="8">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>SID</th>
+              <th>Email Address</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rosterData.map((student, index) => (
+              <tr key={index}>
+                <td>{student.Name}</td>
+                <td>{student.SID}</td>
+                <td>{student.Email}</td>
+                <td>
+                  <Link to={`/student/${student.SID}`}>
+                    <button>View Details</button>
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </main>
     </div>
   );
