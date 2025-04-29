@@ -1,13 +1,13 @@
 import React from "react";
 import { Routes, Route, Outlet } from "react-router-dom";
-import Sidebar from "../../components/sidebar/Sidebar";
+import Sidebar from "../components/sidebar/Sidebar";
 
-export default function Dashboard() {
+export default function Students() {
   return (
     <div style={{ display: "flex" }}>
       <Sidebar />
       <main style={{ flexGrow: 1, padding: "1rem" }}>
-        <Outlet /> {/* This is where child pages (like Students) render */}
+        <p> Students </p>
       </main>
     </div>
   );
