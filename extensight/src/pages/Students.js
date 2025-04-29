@@ -3,6 +3,8 @@ import Sidebar from "../components/sidebar/Sidebar";
 import "./Styles.css";
 
 export default function Students() {
+  const secretKey = process.env.REACT_APP_SECRETKEY;
+  console.log("Loaded API Key:", process.env.REACT_APP_SECRETKEY);
   const [responseData, setResponseData] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +27,7 @@ export default function Students() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer rg_v1_j7uxo1x5jvexeqjj1eqjwshfvh7rjq8chop7_ngk",
+          Authorization: `Bearer ${secretKey}`,
         },
         body: JSON.stringify({
           student_roster: rosterText,
