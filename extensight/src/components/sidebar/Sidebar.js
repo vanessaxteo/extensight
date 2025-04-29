@@ -1,11 +1,12 @@
 import { List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
-import { Home, People, EventNote, Today, Settings} from "@mui/icons-material";
+import { Home, People, EventNote, Today, Settings, AutoAwesome} from "@mui/icons-material";
 import { Link, useLocation } from "react-router-dom";
 import "./Sidebar.css";
 
 const navItems = [
   { text: "Dashboard", icon: <Home />, path: "/" },
   { text: "Students", icon: <People />, path: "/students" },
+  { text: "AI Suggestion", icon: <AutoAwesome/>, path: "/aisuggestion" },
   { text: "Assignments", icon: <EventNote />, path: "/assignments" },
   { text: "Calendar", icon: <Today />, path: "/calendar" },
   { text: "Settings", icon: <Settings />, path: "/settings" },
