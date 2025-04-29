@@ -1,5 +1,5 @@
 import { List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
-import { Home, People, EventNote } from "@mui/icons-material";
+import { Home, People, EventNote, Today, Settings} from "@mui/icons-material";
 import { Link, useLocation } from "react-router-dom";
 import "./Sidebar.css";
 
@@ -7,6 +7,8 @@ const navItems = [
   { text: "Dashboard", icon: <Home />, path: "/dashboard" },
   { text: "Students", icon: <People />, path: "/students" },
   { text: "Assignments", icon: <EventNote />, path: "/assignments" },
+  { text: "Calendar", icon: <Today />, path: "/calendar" },
+  { text: "Settings", icon: <Settings />, path: "/settings" },
 ];
 
 export default function Sidebar() {
