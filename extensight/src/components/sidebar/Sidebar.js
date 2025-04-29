@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import "./Sidebar.css";
 
 const navItems = [
-  { text: "Dashboard", icon: <Home />, path: "/dashboard" },
+  { text: "Dashboard", icon: <Home />, path: "/" },
   { text: "Students", icon: <People />, path: "/students" },
   { text: "Assignments", icon: <EventNote />, path: "/assignments" },
   { text: "Calendar", icon: <Today />, path: "/calendar" },
