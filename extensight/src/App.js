@@ -1,22 +1,18 @@
-import './App.css';
+import { Routes, Route } from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
+import Students from "./pages/Students";
+import Assignments from "./pages/Assignments";
+import Calendar from "./pages/Calendar";
+import Settings from "./pages/Settings";
 
-function App() {
+export default function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <p>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="students" element={<Students />} />
+        <Route path="assignments" element={<Assignments />} />
+        <Route path="calendar" element={<Calendar />} />
+        <Route path="settings" element={<Settings />} />
+    </Routes>
   );
 }
-
-export default App;
