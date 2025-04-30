@@ -122,6 +122,7 @@ export default function Assignments() {
       });
 
       const storedToken = localStorage.getItem("token");
+      const storedTokenExp = localStorage.getItem("tokenExpiry");
       const assignmentsSheetUrl = localStorage.getItem("assignmentsSheet");
       const extensionsSheetUrl = localStorage.getItem("extensionsSheet");
 
@@ -137,7 +138,8 @@ export default function Assignments() {
       setAssignmentsSheetId(extractSheetIdFromUrl(assignmentsSheetUrl));
       setExtensionsSheetId(extractSheetIdFromUrl(extensionsSheetUrl));
 
-      if (storedToken) {
+      const currTime = new Date();
+      if (storedToken && storedTokenExp && currTime.getTime() < storedTokenExp) {
         gapi.client.setToken({ access_token: storedToken });
         getData();
       } else {
@@ -148,6 +150,7 @@ export default function Assignments() {
           callback: (tokenResponse) => {
             gapi.client.setToken({ access_token: tokenResponse.access_token });
             localStorage.setItem("token", tokenResponse.access_token);
+            localStorage.setItem("tokenExpiry", currTime.getTime() + 3550000)
             getData();
           },
         });
