@@ -1,32 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/sidebar/Sidebar";
-import Papa from "papaparse";
 
 const StudentDetails = () => {
-  const { sid } = useParams();
-  const [student, setStudent] = useState(null);
+  const [student, setStudent] = useState();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    fetch("/data/roster.csv")
-      .then((response) => response.text())
-      .then((csvText) => {
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            const studentData = results.data.find(
-              (row) => row["SID"] === sid
-            );
-            setStudent(studentData);
-          },
-        });
-      })
-      .catch((error) => console.error("Error loading CSV:", error));
-  }, [sid]);
+    console.log(location)
+    setStudent(location.state?.data);
+    console.log(student);
+  }, [location]);
 
-  if (!student) return <div>Loading...</div>;
+  if (!student) return null;
 
   return (
     <div style={{ display: "flex" }}>
@@ -48,11 +35,7 @@ const StudentDetails = () => {
             </tr>
             <tr>
               <td><strong>Email Address</strong></td>
-              <td>{student["Email address"]}</td>
-            </tr>
-            <tr>
-              <td><strong>UID</strong></td>
-              <td>{student["UID"]}</td>
+              <td>{student["Email"]}</td>
             </tr>
             <tr>
               <td><strong>Role</strong></td>
