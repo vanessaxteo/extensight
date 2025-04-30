@@ -34,7 +34,7 @@ export default function Students() {
       <Sidebar />
       <main style={{ flexGrow: 1, padding: "1rem" }}>
         <h2>Students</h2>
-        <table border="1" cellPadding="8">
+        <table border="1" cellPadding="8" width="100%">
           <thead>
             <tr>
               <th>Name</th>
