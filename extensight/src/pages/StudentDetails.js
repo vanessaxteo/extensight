@@ -162,15 +162,31 @@ const StudentDetails = () => {
         </table>
         <div>
           Due Dates
-          {assignments.map((assignment, i) => (
-            <div>
-              {assignment["name"]} -- {extensionsData.filter(ext => ext["Approved?"] == "Yes").map(ext => ext["If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?"])
-                .includes(assignment["name"]) ? extensionsData.filter(ext => ext["If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?"] == assignment["name"] && ext["Approved?"] == "Yes")
+          {
+            assignments.map((assignment, i) => {
+              const approvedExtensions = extensionsData.filter(ext => (ext["Approved?"] == "Yes") && (ext["If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?"] == assignment["name"]))
                 .map(ext => ext["What date are you requesting an extension to?"])
-                .sort()
-                .at(-1) + " (Extended)" : assignment["due_date"]}
-            </div>
-          ))}
+                .sort();
+              const requestedExtensions = extensionsData.filter(ext => ext["Approved?"] == undefined && (ext["If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?"] == assignment["name"]))
+                .map(ext => ext["What date are you requesting an extension to?"])
+                .sort();
+
+              let displayedDate = assignment["due_date"];
+
+              if (approvedExtensions.length > 0) {
+                displayedDate = approvedExtensions.at(-1) + " (Extended)"
+              }
+              if (requestedExtensions.length > 0) {
+                displayedDate += ", Pending Extension Request: " + requestedExtensions.at(-1)
+              }
+
+              return (  
+                <div>
+                  {assignment["name"]} -- {displayedDate}
+                </div>
+              );
+            })
+          }
         </div>
       </main>
     </div>
