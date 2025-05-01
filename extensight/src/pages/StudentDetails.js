@@ -10,6 +10,7 @@ const StudentDetails = () => {
   const [student, setStudent] = useState();
   const [assignments, setAssignments] = useState([]);
   const [extensionsData, setExtensionsData] = useState([]);
+  const [aiRecommendation, setAIRecommendation] = useState("");
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -17,6 +18,27 @@ const StudentDetails = () => {
   function extractSheetIdFromUrl(url) {
     const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
     return match ? match[1] : null;
+  }
+
+  async function getAISuggestions(assignments, extensions) {
+    const response = await fetch(
+      'https://noggin.rea.gent/desperate-marlin-9059',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer rg_v1_g4jj91fakulvx5dnznona44ynxvgsw1oxqlh_ngk',
+        },
+        body: JSON.stringify({
+          "student_extensions": JSON.stringify(extensions),
+          "assignments": JSON.stringify(assignments),
+          "student": student
+        }),
+      }
+    ).then(response => response.text());
+    console.log(response);
+    setAIRecommendation(response);
+    return response;
   }
 
   async function getData(assignmentsSheetId, extensionsSheetId) {
@@ -103,6 +125,8 @@ const StudentDetails = () => {
       if (storedToken && storedTokenExp && currTime.getTime() < storedTokenExp) {
         gapi.client.setToken({ access_token: storedToken });
         getData(assignmentsSheetId, extensionsSheetId);
+        setExtensionsData(extensionsData.filter(ext => ext["SID"] == student["SID"]));
+        
       } else {
         tokenClient = window.google.accounts.oauth2.initTokenClient({
           client_id:
@@ -118,11 +142,20 @@ const StudentDetails = () => {
         });
         tokenClient.requestAccessToken();
       }
+
+
     });
 
 
   }, [location]);
   
+  useEffect(() => {
+    if (assignments.length > 0 && extensionsData.length > 0 && student) {
+      const filteredExtensions = extensionsData.filter(ext => ext["SID"] === student["SID"]);
+      getAISuggestions(assignments, filteredExtensions);
+    }
+  }, [assignments, extensionsData, student]);
+
   if (loading) return <div>Loading student details...</div>;
   
 
@@ -160,6 +193,11 @@ const StudentDetails = () => {
             </tr>
           </tbody>
         </table>
+        <div>
+          AI Recommendation
+          <br />
+          {aiRecommendation != "" ? aiRecommendation : "Loading AI Recommendation..."}
+        </div>
         <div>
           Due Dates
           {
