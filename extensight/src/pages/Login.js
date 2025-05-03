@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 import "../components/Onboarding.css";
 
 export default function Login() {
-  const [courseName, setCourseName] = useState("");
-  const [studentRoster, setStudentRoster] = useState("");
+  const [courseName, setCourseName] = useState("cs61b");
+  const [studentRoster, setStudentRoster] = useState("https://docs.google.com/spreadsheets/d/1K8zaV02ZOBP2s6SnlBuss1geydaXdhcAlhunTVB8zvw/edit?gid=0#gid=0");
   const [dspData, setDspData] = useState("");
-  const [extensionsSheet, setExtensionsSheet] = useState("");
-  const [assignmentsSheet, setAssignmentsSheet] = useState("");
+  const [extensionsSheet, setExtensionsSheet] = useState("https://docs.google.com/spreadsheets/d/1TiZamRk1Vsk89mX-C5oD9VT6ig8PZCj-NLxuWb42MOg/edit?gid=0#gid=0");
+  const [assignmentsSheet, setAssignmentsSheet] = useState("https://docs.google.com/spreadsheets/d/1Mc0rJBq7NwKygekgf-YjgOKFhwsykzg_0ui0LyBXar8/edit?gid=0#gid=0");
 
   const navigate = useNavigate();
 
