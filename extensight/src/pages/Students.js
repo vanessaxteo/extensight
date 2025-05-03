@@ -111,7 +111,7 @@ export default function Students() {
                 <td>{student.SID}</td>
                 <td>{student.Email}</td>
                 <td>
-                  <Link to={`/student/${student.SID}`}>
+                  <Link to={`/student/${student.SID}`} state={{data: rosterData.filter(s => s.SID == student.SID)[0]}}>
                     <button>View Details</button>
                   </Link>
                 </td>
