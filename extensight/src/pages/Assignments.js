@@ -79,25 +79,25 @@ const AssignmentsOverview = memo(({ assignments, extensionsData }) => {
     <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
       <Card sx={{ flex: 1, borderRadius: 2 }}>
         <CardContent>
-          <Typography variant="subtitle2" color="primary" gutterBottom>Total Assignments</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#0055FF' }} gutterBottom>Total Assignments</Typography>
           <Typography variant="h4">{assignments.length}</Typography>
         </CardContent>
       </Card>
       <Card sx={{ flex: 1, borderRadius: 2 }}>
         <CardContent>
-          <Typography variant="subtitle2" color="primary" gutterBottom>Extension Requests</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#0055FF' }} gutterBottom>Extension Requests</Typography>
           <Typography variant="h4">{extensionRequests}</Typography>
         </CardContent>
       </Card>
       <Card sx={{ flex: 1, borderRadius: 2 }}>
         <CardContent>
-          <Typography variant="subtitle2" color="primary" gutterBottom>Pending Approval</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#0055FF' }} gutterBottom>Pending Approval</Typography>
           <Typography variant="h4">{pendingApprovals}</Typography>
         </CardContent>
       </Card>
       <Card sx={{ flex: 1, borderRadius: 2 }}>
         <CardContent>
-          <Typography variant="subtitle2" color="primary" gutterBottom>Student Conflicts</Typography>
+          <Typography variant="subtitle2" sx={{ color: '#0055FF' }} gutterBottom>Student Conflicts</Typography>
           <Typography variant="h4">{studentConflicts}</Typography>
         </CardContent>
       </Card>
@@ -632,7 +632,7 @@ export default function Assignments() {
 
   const renderSheetUrlForm = () => (
     <Paper elevation={3} sx={{ padding: 3, maxWidth: 600, margin: '0 auto', mt: 4 }}>
-      <Typography variant="h5" gutterBottom>Enter Google Spreadsheet URLs</Typography>
+      <Typography variant="h5" sx={{ color: '#0055FF', fontWeight: 500 }} gutterBottom>Enter Google Spreadsheet URLs</Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <TextField
         label="Assignments Spreadsheet URL"
@@ -840,7 +840,7 @@ export default function Assignments() {
     <div style={{ display: "flex" }}>
       <Sidebar />
       <main style={{ flexGrow: 1, padding: "2rem" }}>
-        <Typography variant="h4" gutterBottom>Assignments</Typography>
+        <Typography variant="h2" sx={{ mb: 1, fontWeight: 500, fontSize: 24, color: '#0055FF' }}>Assignments</Typography>
         {error && <Alert severity="error" sx={{ mb: 2, maxWidth: "80%" }}>{error}</Alert>}
 
         {/* Metrics Bar Component */}
@@ -944,7 +944,7 @@ export default function Assignments() {
           onClose={closeDrawer}
         >
           <Box sx={{ width: 500, p: 3 }}>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" sx={{ color: '#0055FF', fontWeight: 500 }} gutterBottom>
               Extension Requests for "{selectedAssignment}"
             </Typography>
             

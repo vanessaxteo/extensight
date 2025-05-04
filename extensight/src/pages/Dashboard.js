@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, Outlet } from 'react-router-dom';
 import Sidebar from "../components/sidebar/Sidebar";
+import { Typography } from "@mui/material";
 
 export default function Dashboard() {
   return (
@@ -11,7 +12,7 @@ export default function Dashboard() {
           {/* Summary Section */}
           <div class="summary-section">
             <div class="summary-header">
-              <h2>Summary of Extension Insights</h2>
+              <Typography variant="h2" sx={{ mb: 1, fontWeight: 500, fontSize: 24, color: '#0055FF' }}>Summary of Extension Insights</Typography>
               <button class="toggle-btn" id="summaryToggle">
                 <i class="icon lucide-chevron-down"></i>
               </button>
