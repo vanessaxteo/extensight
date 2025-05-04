@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
+// Use only one approach for GAPI - stick with the imported version
 import { gapi } from "gapi-script";
 import Sidebar from "../components/sidebar/Sidebar";
 import {
@@ -8,7 +9,6 @@ import {
   TableRow,
   TableCell,
   TableBody,
-  Modal,
   Box,
   Select,
   MenuItem,
@@ -18,9 +18,115 @@ import {
   CircularProgress,
   Paper,
   Typography,
+  Card,
+  CardContent,
+  Drawer,
+  IconButton,
+  Divider,
 } from "@mui/material";
+import { DataGrid, GridToolbarQuickFilter } from '@mui/x-data-grid';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 let tokenClient;
+
+// Memoized component for the metrics overview
+const AssignmentsOverview = memo(({ assignments, extensionsData }) => {
+  // Helper function to find student names consistently
+  const findStudentName = useCallback((record) => {
+    if (!record) return null;
+    for (const column of STUDENT_NAME_COLUMN_NAMES) {
+      if (column in record && record[column]) {
+        return record[column];
+      }
+    }
+    return null;
+  }, []);
+
+  // Memoized calculations for metrics
+  const { extensionRequests, pendingApprovals, approvedRequests, studentConflicts } = useMemo(() => {
+    // Track student names for conflict detection
+    const studentCounts = {};
+    
+    // Count approved requests
+    const approved = extensionsData.filter(ext => 
+      ext['Approved (y/n)'] === 'Yes' || 
+      ext['Approved'] === 'Yes' || 
+      ext['approved'] === 'Yes' || 
+      ext['Approved?'] === 'Yes'
+    ).length;
+    
+    // Process student names for conflict detection
+    extensionsData.forEach(ext => {
+      // Find student name using various possible column names
+      const studentName = findStudentName(ext);
+      if (studentName) {
+        studentCounts[studentName] = (studentCounts[studentName] || 0) + 1;
+      }
+    });
+    
+    // Count students with more than one extension request
+    const conflicts = Object.values(studentCounts).filter(count => count > 1).length;
+    
+    return {
+      extensionRequests: extensionsData.length,
+      pendingApprovals: extensionsData.length - approved,
+      approvedRequests: approved,
+      studentConflicts: conflicts
+    };
+  }, [extensionsData, findStudentName]);
+
+  return (
+    <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+      <Card sx={{ flex: 1, borderRadius: 2 }}>
+        <CardContent>
+          <Typography variant="subtitle2" color="primary" gutterBottom>Total Assignments</Typography>
+          <Typography variant="h4">{assignments.length}</Typography>
+        </CardContent>
+      </Card>
+      <Card sx={{ flex: 1, borderRadius: 2 }}>
+        <CardContent>
+          <Typography variant="subtitle2" color="primary" gutterBottom>Extension Requests</Typography>
+          <Typography variant="h4">{extensionRequests}</Typography>
+        </CardContent>
+      </Card>
+      <Card sx={{ flex: 1, borderRadius: 2 }}>
+        <CardContent>
+          <Typography variant="subtitle2" color="primary" gutterBottom>Pending Approval</Typography>
+          <Typography variant="h4">{pendingApprovals}</Typography>
+        </CardContent>
+      </Card>
+      <Card sx={{ flex: 1, borderRadius: 2 }}>
+        <CardContent>
+          <Typography variant="subtitle2" color="primary" gutterBottom>Student Conflicts</Typography>
+          <Typography variant="h4">{studentConflicts}</Typography>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+});
+
+// Define constants for column name options to make the code more maintainable
+const ASSIGNMENT_COLUMN_NAMES = [
+  "If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?",
+  "Assignment",
+  "Which assignment do you need an extension for?",
+  "Assignment Name"
+];
+
+const STUDENT_NAME_COLUMN_NAMES = [
+  "Name", 
+  "What is your name?", 
+  "Email Address", 
+  "Student Name",
+  "Full Name"
+];
+
+const REQUESTED_DATE_COLUMN_NAMES = [
+  "What date are you requesting an extension to?",
+  "Requested Date",
+  "Extension Date",
+  "New Due Date"
+];
 
 export default function Assignments() {
   const [assignments, setAssignments] = useState([]);
@@ -47,22 +153,67 @@ export default function Assignments() {
       return;
     }
 
-    const updatedExtensionsData = [...extensionsData];
+    try {
+      // First, get sheet column headers to determine column structure
+      const sheetsMetadata = await gapi.client.sheets.spreadsheets.get({
+        spreadsheetId: extensionsSheetId
+      });
+      
+      // Get first sheet name
+      const firstSheetName = sheetsMetadata.result.sheets[0]?.properties.title || "Sheet1";
+      console.log("Using sheet:", firstSheetName);
+      
+      // Get header row
+      const headerRowResponse = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: extensionsSheetId,
+        range: `${firstSheetName}!A1:Z1`
+      });
+      
+      const headers = headerRowResponse.result.values[0] || [];
+      console.log("Found headers:", headers);
+      
+      // Find the 'Approved (y/n)' column index
+      const approvedColIndex = headers.findIndex(header => header === "Approved (y/n)");
+      
+      if (approvedColIndex === -1) {
+        console.error("Could not find 'Approved (y/n)' column in spreadsheet");
+        setError("Could not find 'Approved (y/n)' column in spreadsheet. Please make sure it exists.");
+        return;
+      }
+      
+      // Convert column index to letter (0 = A, 1 = B, etc.)
+      const approvedColLetter = String.fromCharCode(65 + approvedColIndex); // A=65 in ASCII
+      console.log(`Found 'Approved (y/n)' in column ${approvedColLetter}`);
+      
+      const updatedExtensionsData = [...extensionsData];
 
-    selectedExtensions.forEach((ext) => {
-      updatedExtensionsData[ext["ind"]]["Approved?"] = ext["Approved?"];
-    });
+      // Prepare values for the update
+      const approvalStatus = [];
+      
+      // Only update the selected extensions
+      for (let i = 0; i < selectedExtensions.length; i++) {
+        const ext = selectedExtensions[i];
+        const rowIndex = ext["ind"] + 2; // +2 because 1-indexed and header row
+        const approvalValue = ext["Approved (y/n)"] || "";  
 
-    const approvalStatus = updatedExtensionsData.map((ext) =>
-      ext["Approved?"] !== undefined ? [ext["Approved?"]] : [""]
-    );
+        // Update just this cell with the approval value
+        await gapi.client.sheets.spreadsheets.values.update({
+          spreadsheetId: extensionsSheetId,
+          range: `${firstSheetName}!${approvedColLetter}${rowIndex}`,
+          resource: { values: [[approvalValue]] },
+          valueInputOption: "RAW",
+        });
+      }
 
-    await gapi.client.sheets.spreadsheets.values.update({
-      spreadsheetId: extensionsSheetId,
-      range: `J2:J${updatedExtensionsData.length + 1}`,
-      resource: { values: approvalStatus },
-      valueInputOption: "RAW",
-    });
+      console.log("Successfully updated approvals in 'Approved (y/n)' column");
+      alert("Extension approvals successfully updated!");
+      
+      // Re-fetch data to update the UI
+      getData();
+    } catch (error) {
+      console.error("Error updating extension approvals:", error);
+      setError(`Error updating approvals: ${error.message || 'Unknown error'}`);
+    }
   }
 
   const saveSheetUrls = () => {
@@ -236,28 +387,15 @@ export default function Assignments() {
 
   useEffect(() => {
     const loadAndInitializeGapi = () => {
-      setLoadingMessage("Loading Google API...");
-      // Explicitly adding a script to load the Google API client
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js';
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        console.log("Debug - Google API script loaded");
-        initializeGoogleAPI();
-      };
-      script.onerror = () => {
-        console.error("Debug - Failed to load Google API script");
-        setError("Failed to load Google API. Please check your internet connection and try again.");
-        setLoading(false);
-      };
-      document.body.appendChild(script);
+      setLoadingMessage("Initializing Google API...");
+      // We already have gapi from the import
+      initializeGoogleAPI();
     };
     
     const initializeGoogleAPI = () => {
       setLoadingMessage("Initializing Google Sheets API...");
-      // First check if gapi is available
-      if (!window.gapi) {
+      // Use the imported gapi
+      if (!gapi) {
         console.error("Debug - gapi not available");
         setError("Google API not loaded properly. Please refresh the page and try again.");
         setLoading(false);
@@ -265,7 +403,7 @@ export default function Assignments() {
       }
       
       // Load the client portion of the API
-      window.gapi.load("client", async () => {
+      gapi.load("client", async () => {
         try {
           setLoadingMessage("Loading Google Sheets API...");
           console.log("Debug - Before gapi.client.init");
@@ -351,6 +489,7 @@ export default function Assignments() {
           return;
         }
         
+        // Initialize the token client with a more user-friendly approach
         tokenClient = window.google.accounts.oauth2.initTokenClient({
           client_id: "189937528489-6nrjdp52eohmoposc8t31ggkts7sk5nr.apps.googleusercontent.com",
           scope: "https://www.googleapis.com/auth/spreadsheets",
@@ -361,13 +500,37 @@ export default function Assignments() {
               setLoading(false);
               return;
             }
-            window.gapi.client.setToken({ access_token: tokenResponse.access_token });
+            
+            // Use the imported gapi consistently
+            gapi.client.setToken({ access_token: tokenResponse.access_token });
             localStorage.setItem("token", tokenResponse.access_token);
             localStorage.setItem("tokenExpiry", currTime.getTime() + 3550000);
             getData();
           },
+          // Add error handler
+          error_callback: (error) => {
+            console.error("Auth error:", error);
+            setError(`Authentication failed: ${error || 'Popup may have been blocked. Please allow popups for this site.'}`); 
+            setLoading(false);
+          }
         });
-        tokenClient.requestAccessToken({ prompt: 'consent' });
+        
+        // Request token with focus on the current window to avoid popup blockers
+        try {
+          tokenClient.requestAccessToken({
+            prompt: 'consent',
+            hint: '', // Optional email hint
+            // Use a timeout to give the browser time to focus
+            timeout: 500 
+          });
+          
+          // Ensure the window has focus to prevent popup blocking
+          window.focus();
+        } catch (err) {
+          console.error("Error requesting token:", err);
+          setError(`Could not authenticate: ${err.message}. Try disabling popup blockers.`);
+          setLoading(false);
+        }
       }
     };
 
@@ -416,13 +579,56 @@ export default function Assignments() {
           console.log("Debug - New token acquired, retrying data fetch");
           getData();
         },
+        error_callback: (error) => {
+          console.error("Auth error:", error);
+          setError(`Authentication failed: ${error || 'Popup may have been blocked. Please allow popups for this site.'}`); 
+        }
       });
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      
+      // Using the same improved pattern as in the initial auth flow
+      try {
+        tokenClient.requestAccessToken({
+          prompt: 'consent',
+          timeout: 500
+        });
+        window.focus();
+      } catch (err) {
+        console.error("Error requesting token:", err);
+        setError(`Could not authenticate: ${err.message}. Try disabling popup blockers.`);
+      }
     } else {
       console.error("Debug - Google accounts API not available");
       setError("Google authentication API not available. Please refresh the page and try again.");
     }
   };
+
+  // Auto-process URLs when they are available
+  useEffect(() => {
+    if (showSheetUrlForm && assignmentsSheetUrl && extensionsSheetUrl) {
+      console.log("Auto-processing form with existing spreadsheet URLs");
+      
+      // Short delay to allow UI to render first
+      const timer = setTimeout(() => {
+        saveSheetUrls();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showSheetUrlForm, assignmentsSheetUrl, extensionsSheetUrl]);
+  
+  // Auto-authenticate when needed
+  useEffect(() => {
+    if (error && error.includes("authentication") && window.google && window.google.accounts) {
+      console.log("Auto-triggering re-authentication due to authentication error");
+      
+      // Short delay to allow UI to render first
+      const timer = setTimeout(() => {
+        handleReAuthenticate();
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const renderSheetUrlForm = () => (
     <Paper elevation={3} sx={{ padding: 3, maxWidth: 600, margin: '0 auto', mt: 4 }}>
@@ -458,6 +664,7 @@ export default function Assignments() {
           variant="contained"
           color="primary"
           onClick={saveSheetUrls}
+          id="auto-save-button" // Adding ID for reference
         >
           Save and Load Data
         </Button>
@@ -465,9 +672,147 @@ export default function Assignments() {
       <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>
         If you're experiencing permission issues, try clicking "Re-authenticate with Google" to refresh your Google authorization.
       </Typography>
+      {/* Only show this message when we're auto-processing */}
+      {(assignmentsSheetUrl && extensionsSheetUrl) && (
+        <Alert severity="info" sx={{ mt: 2 }}>
+          Auto-processing your request... Please wait.
+        </Alert>
+      )}
     </Paper>
   );
 
+  // Helper functions for finding column values - moved before any conditional returns
+  const findAssignmentColumn = useCallback((data) => {
+    if (!data || data.length === 0) return null;
+    return ASSIGNMENT_COLUMN_NAMES.find(colName => colName in data[0]);
+  }, []);
+
+  const findValueFromColumns = useCallback((record, columnOptions) => {
+    if (!record) return null;
+    for (const column of columnOptions) {
+      if (column in record && record[column]) {
+        return record[column];
+      }
+    }
+    return null;
+  }, []);
+  
+  // Memoize the assignment column to avoid recalculating for each cell
+  const assignmentColumn = useMemo(() => 
+    findAssignmentColumn(extensionsData),
+    [extensionsData, findAssignmentColumn]
+  );
+  
+  // Direct function to count extensions for an assignment - simpler and more reliable approach
+  const countExtensionsForAssignment = useCallback((assignmentName) => {
+    if (!assignmentName || !extensionsData || extensionsData.length === 0) return 0;
+    
+    let matchingExtensions = [];
+    
+    // Count extensions for this assignment
+    if (assignmentColumn && extensionsData.some(ext => assignmentColumn in ext)) {
+      // If we have an assignment column, use it for direct matches
+      matchingExtensions = extensionsData.filter(ext => ext[assignmentColumn] === assignmentName);
+    } else {
+      // Fallback to fuzzy matching across all fields
+      matchingExtensions = extensionsData.filter(ext => 
+        Object.values(ext).some(value => 
+          typeof value === 'string' && 
+          value.toLowerCase().includes(assignmentName.toLowerCase())
+        )
+      );
+    }
+    
+    return matchingExtensions.length;
+  }, [extensionsData, assignmentColumn]);
+  
+  // Function to get pending count (not approved)
+  const countPendingForAssignment = useCallback((assignmentName) => {
+    if (!assignmentName || !extensionsData || extensionsData.length === 0) return 0;
+    
+    let matchingExtensions = [];
+    
+    // Find extensions for this assignment
+    if (assignmentColumn && extensionsData.some(ext => assignmentColumn in ext)) {
+      matchingExtensions = extensionsData.filter(ext => ext[assignmentColumn] === assignmentName);
+    } else {
+      matchingExtensions = extensionsData.filter(ext => 
+        Object.values(ext).some(value => 
+          typeof value === 'string' && 
+          value.toLowerCase().includes(assignmentName.toLowerCase())
+        )
+      );
+    }
+    
+    // Count those that are not approved with 'Yes'
+    return matchingExtensions.filter(ext => ext['Approved (y/n)'] !== 'Yes').length;
+  }, [extensionsData, assignmentColumn]);
+  
+  // Function to get approved count
+  const countApprovedForAssignment = useCallback((assignmentName) => {
+    if (!assignmentName || !extensionsData || extensionsData.length === 0) return 0;
+    
+    let matchingExtensions = [];
+    
+    // Find extensions for this assignment
+    if (assignmentColumn && extensionsData.some(ext => assignmentColumn in ext)) {
+      matchingExtensions = extensionsData.filter(ext => ext[assignmentColumn] === assignmentName);
+    } else {
+      matchingExtensions = extensionsData.filter(ext => 
+        Object.values(ext).some(value => 
+          typeof value === 'string' && 
+          value.toLowerCase().includes(assignmentName.toLowerCase())
+        )
+      );
+    }
+    
+    // Count those that are approved with 'Yes'
+    return matchingExtensions.filter(ext => ext['Approved (y/n)'] === 'Yes').length;
+  }, [extensionsData, assignmentColumn]);
+  
+  // Helper for filtering extensions by assignment name - direct implementation
+  const filterExtensionsFor = useCallback((assignmentName) => {
+    if (!assignmentName || !extensionsData || extensionsData.length === 0) return [];
+    
+    let matchingExtensions = [];
+    
+    // Find extensions for this assignment
+    if (assignmentColumn && extensionsData.some(ext => assignmentColumn in ext)) {
+      // If we have an assignment column, use it for direct matches
+      matchingExtensions = extensionsData.filter(ext => ext[assignmentColumn] === assignmentName);
+    } else {
+      // Fallback to fuzzy matching across all fields
+      matchingExtensions = extensionsData.filter(ext => 
+        Object.values(ext).some(value => 
+          typeof value === 'string' && 
+          value.toLowerCase().includes(assignmentName.toLowerCase())
+        )
+      );
+    }
+    
+    return matchingExtensions;
+  }, [extensionsData, assignmentColumn]);
+  
+  // Helper for drawer state management
+  const closeDrawer = useCallback(() => {
+    setSelectedAssignment("");
+    setSelectedExtensions([]);
+  }, []);
+  
+  const openDrawer = useCallback((assignmentName) => {
+    const selected = filterExtensionsFor(assignmentName);
+    setSelectedExtensions(selected);
+    setSelectedAssignment(assignmentName);
+    
+    // Debug extension spreadsheet data
+    console.log("Debug - Total extension data entries:", extensionsData.length);
+    console.log("Debug - First 3 extension records (sample):", extensionsData.slice(0, 3));
+    console.log("Debug - Available column names in extension data:", 
+      extensionsData.length > 0 ? Object.keys(extensionsData[0]) : "No extension data");
+    console.log("Debug - Using assignment column:", assignmentColumn || "None found");
+  }, [filterExtensionsFor, extensionsData, assignmentColumn]);
+
+  // Loading state - after all hooks are defined
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80vh" }}>
@@ -489,99 +834,121 @@ export default function Assignments() {
     );
   }
 
+
+
   return (
     <div style={{ display: "flex" }}>
       <Sidebar />
       <main style={{ flexGrow: 1, padding: "2rem" }}>
-        <h1>Assignments</h1>
+        <Typography variant="h4" gutterBottom>Assignments</Typography>
         {error && <Alert severity="error" sx={{ mb: 2, maxWidth: "80%" }}>{error}</Alert>}
 
-        <TableContainer sx={{ width: "80%", marginBottom: "2rem" }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Assignment</TableCell>
-                <TableCell>Due Date</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {assignments.map((assignment, index) => (
-                <TableRow
-                  key={index}
-                  hover
-                  onClick={() => {
-                    setSelectedAssignment(assignment.name);
-                    
-                    // Debug extension spreadsheet data
-                    console.log("Debug - Total extension data entries:", extensionsData.length);
-                    console.log("Debug - First 3 extension records (sample):", extensionsData.slice(0, 3));
-                    console.log("Debug - Available column names in extension data:", 
-                      extensionsData.length > 0 ? Object.keys(extensionsData[0]) : "No extension data");
-                    
-                    // Try multiple possible column names for assignment selection
-                    const assignmentColumnNames = [
-                      "If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?",
-                      "Assignment",
-                      "Which assignment do you need an extension for?",
-                      "Assignment Name"
-                    ];
-                    
-                    // Find the first column name that exists in the data
-                    const assignmentColumn = assignmentColumnNames.find(colName => 
-                      extensionsData.length > 0 && colName in extensionsData[0]
-                    );
-                    
-                    console.log("Debug - Using assignment column:", assignmentColumn || "None found");
-                    
-                    let selected = [];
-                    
-                    if (assignmentColumn) {
-                      // Filter using the found column name
-                      selected = extensionsData.filter(ext => ext[assignmentColumn] === assignment.name);
-                    } else {
-                      // Fallback: try to match assignment name in any column
-                      console.log("Debug - No assignment column found, trying fuzzy match");
-                      selected = extensionsData.filter(ext => {
-                        // Check all string values in the record for the assignment name
-                        return Object.values(ext).some(value => 
-                          typeof value === 'string' && 
-                          value.toLowerCase().includes(assignment.name.toLowerCase())
-                        );
-                      });
-                    }
-                    
-                    setSelectedExtensions(selected);
-                    console.log("Debug - Selected extensions for", assignment.name, ":", selected);
-                  }}
-                >
-                  <TableCell>{assignment.name}</TableCell>
-                  <TableCell>{assignment.due_date}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        {/* Metrics Bar Component */}
+        <AssignmentsOverview 
+          assignments={assignments} 
+          extensionsData={extensionsData} 
+        />
 
-        <Modal
-          open={selectedAssignment !== ""}
-          onClose={() => setSelectedAssignment("")}
-        >
-          <Box
-            sx={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: 600,
-              bgcolor: "background.paper",
-              boxShadow: 24,
-              p: 4,
-              borderRadius: 2,
-              maxHeight: "80vh",
-              overflowY: "auto",
+        {/* DataGrid */}
+        <Box sx={{ height: 600, width: '100%', mb: 4 }}>
+          <DataGrid
+            rows={assignments.map((assignment, index) => {
+              // Calculate real counts for this assignment
+              const matchingExtensions = extensionsData.filter(ext => {
+                // Try exact match first (if we have an assignment column)
+                if (assignmentColumn && ext[assignmentColumn]) {
+                  return ext[assignmentColumn] === assignment.name;
+                }
+                
+                // Fall back to fuzzy matching in all fields
+                return Object.values(ext).some(value => 
+                  typeof value === 'string' && 
+                  value.toLowerCase().includes(assignment.name.toLowerCase())
+                );
+              });
+              
+              // Count approved extensions
+              const approvedCount = matchingExtensions.filter(ext => 
+                ext['Approved (y/n)'] === 'Yes' || 
+                ext['Approved'] === 'Yes' || 
+                ext['approved'] === 'Yes' || 
+                ext['Approved?'] === 'Yes'
+              ).length;
+              
+              // Build the row data in the format that works
+              return {
+                id: index,
+                name: assignment.name,
+                due_date: assignment.due_date,
+                // Use the field names that work in the DataGrid
+                requests: matchingExtensions.length,
+                pending: matchingExtensions.length - approvedCount,
+                approved: approvedCount
+              };
+            })}
+            columns={[
+              { field: 'name', headerName: 'Assignment', flex: 1 },
+              { field: 'due_date', headerName: 'Due Date', width: 130 },
+              { field: 'requests', headerName: 'Requests', width: 110, type: 'number' },
+              { field: 'pending', headerName: 'Pending', width: 100, type: 'number' },
+              { field: 'approved', headerName: 'Approved', width: 100, type: 'number' },
+              {
+                field: 'actions',
+                headerName: '',
+                width: 50,
+                sortable: false,
+                filterable: false,
+                renderCell: (params) => (
+                  <IconButton onClick={() => openDrawer(params.row.name)}>
+                    <ChevronRightIcon />
+                  </IconButton>
+                ),
+              },
+            ]}
+            components={{ Toolbar: GridToolbarQuickFilter }}
+            componentsProps={{
+              toolbar: {
+                showQuickFilter: true,
+                quickFilterProps: { 
+                  debounceMs: 300,
+                  placeholder: "Search assignments...",
+                  "aria-label": "Filter assignments"
+                },
+              },
             }}
-          >
-            <h2>Extension Requests for "{selectedAssignment}"</h2>
+            components={{
+              Cell: ({ value, field }) => {
+                // For numeric columns, ensure the value is rendered as a number
+                if (['requestsCount', 'pendingCount', 'approvedCount'].includes(field)) {
+                  return <div style={{textAlign: 'center', padding: '8px'}}>{value}</div>;
+                }
+                // For other columns, use default rendering
+                return <div style={{padding: '8px'}}>{value}</div>;
+              }
+            }}
+            onRowClick={(params) => openDrawer(params.row.name)}
+            sx={{
+              '& .MuiDataGrid-columnHeaders': { backgroundColor: '#F5F5F5' },
+              '& .MuiDataGrid-row:hover': { backgroundColor: 'rgba(25, 118, 210, 0.04)' },
+              boxShadow: 1,
+              borderRadius: 2,
+              p: 1
+            }}
+          />
+        </Box>
+
+        {/* Slide-in Drawer instead of Modal */}
+        <Drawer
+          anchor="right"
+          open={selectedAssignment !== ""}
+          onClose={closeDrawer}
+        >
+          <Box sx={{ width: 500, p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Extension Requests for "{selectedAssignment}"
+            </Typography>
+            
+            <Divider sx={{ mb: 2 }} />
 
             <TableContainer>
               <Table>
@@ -596,30 +963,45 @@ export default function Assignments() {
                   {selectedExtensions.length > 0 ? (
                     selectedExtensions.map((extension, i) => {
                       console.log("Debug - Extension data for row", i, extension);
-                      const studentName = extension["Name"] || extension["What is your name?"] || extension["Email Address"] || "Unknown";
-                      const requestedDate = extension["What date are you requesting an extension to?"] || 
-                                          extension["Requested Date"] || 
-                                          extension["Extension Date"] || 
-                                          "";
+                      const studentName = findValueFromColumns(extension, STUDENT_NAME_COLUMN_NAMES) || "Unknown";
+                      const requestedDate = findValueFromColumns(extension, REQUESTED_DATE_COLUMN_NAMES) || "";
                       
                       return (
                         <TableRow key={i}>
-                          <TableCell>{studentName}</TableCell>
-                          <TableCell>{requestedDate}</TableCell>
+                          <TableCell sx={{ fontSize: '0.9rem' }}>{studentName}</TableCell>
+                          <TableCell sx={{ fontSize: '0.9rem' }}>{requestedDate}</TableCell>
                           <TableCell>
-                            <Select
-                              value={extension["Approved?"] || ""}
-                              size="small"
-                              onChange={(e) => {
-                                const updated = [...selectedExtensions];
-                                updated[i]["Approved?"] = e.target.value;
-                                setSelectedExtensions(updated);
-                              }}
-                            >
-                              <MenuItem value="">-</MenuItem>
-                              <MenuItem value="No">No</MenuItem>
-                              <MenuItem value="Yes">Yes</MenuItem>
-                            </Select>
+                            {/* Check if the Approved (y/n) column exists in the headers */}
+                            {extensionsData.length > 0 && 'Approved (y/n)' in extensionsData[0] ? (
+                              <>
+                                <Select
+                                  value={extension["Approved (y/n)"] || extension["Approved?"] || ""}
+                                  size="small"
+                                  onChange={(e) => {
+                                    const updated = [...selectedExtensions];
+                                    updated[i]["Approved (y/n)"] = e.target.value;
+                                    setSelectedExtensions(updated);
+                                  }}
+                                >
+                                  <MenuItem value="">-</MenuItem>
+                                  <MenuItem value="No">No</MenuItem>
+                                  <MenuItem value="Yes">Yes</MenuItem>
+                                </Select>
+                              </>
+                            ) : (
+                              <>
+                                <Select
+                                  value=""
+                                  size="small"
+                                  disabled
+                                >
+                                  <MenuItem value="">-</MenuItem>
+                                </Select>
+                                <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+                                  "Approved (y/n)" column missing in spreadsheet
+                                </Typography>
+                              </>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -633,18 +1015,19 @@ export default function Assignments() {
               </Table>
             </TableContainer>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
               <Button
                 variant="outlined"
-                onClick={() => setSelectedAssignment("")}
+                onClick={closeDrawer}
               >
                 Cancel
               </Button>
               <Button
                 variant="contained"
                 color="primary"
+                disabled={selectedExtensions.length === 0}
                 onClick={() => {
-                  setSelectedAssignment("");
+                  closeDrawer();
                   submitExtensionsApproval();
                 }}
               >
@@ -652,7 +1035,7 @@ export default function Assignments() {
               </Button>
             </Box>
           </Box>
-        </Modal>
+        </Drawer>
       </main>
     </div>
   );
