@@ -87,12 +87,84 @@ const StudentDetails = ({ student, onClose }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [notes, setNotes] = useState("");
   
-  // Sample deadlines - in a real implementation, this would come from your data
-  const deadlines = [
-    { id: 1, name: 'Assignment 2 Deadline', date: '3/21/25', color: '#e8f5e9' },
-    { id: 2, name: 'Midterm 1', date: '3/24/25', color: '#ffebee' },
-    { id: 3, name: 'Requested Extension Assignment 2', date: '3/27/25', aiSuggested: '3/23/25', color: '#fff8e1' }
-  ];
+  // Get all available student data from the original record
+  const { original } = student;
+  
+  // Helper function to get additional student information
+  const getAdditionalInfo = () => {
+    const excludedFields = ['name', 'email', 'sid', 'rowIndex', 'id'];
+    const infoItems = [];
+    
+    // Extract all available fields from the original record
+    Object.keys(original || {}).forEach(key => {
+      const value = original[key];
+      if (
+        value && 
+        typeof value === 'string' && 
+        value.trim() !== '' && 
+        !excludedFields.includes(key.toLowerCase())
+      ) {
+        infoItems.push({ label: key, value });
+      }
+    });
+    
+    return infoItems;
+  };
+  
+  // Detect possible deadlines or important dates from student data
+  const getDeadlines = () => {
+    const possibleDateFields = ['Due Date', 'Deadline', 'Exam Date', 'Midterm', 'Final'];
+    const deadlines = [];
+    
+    let id = 1;
+    Object.keys(original || {}).forEach(key => {
+      const value = original[key];
+      
+      // If the field name contains words related to deadlines
+      if (possibleDateFields.some(field => key.includes(field)) && value) {
+        deadlines.push({
+          id: id++,
+          name: key,
+          date: value,
+          color: key.includes('Midterm') || key.includes('Exam') ? '#ffebee' : '#e8f5e9'
+        });
+      }
+      
+      // If field name includes "Extension" or "Request"
+      if ((key.includes('Extension') || key.includes('Request')) && value) {
+        deadlines.push({
+          id: id++,
+          name: `Requested ${key}`,
+          date: value,
+          color: '#fff8e1',
+          aiSuggested: '3 days earlier'
+        });
+      }
+    });
+    
+    // If no real deadlines were found, use sample ones
+    if (deadlines.length === 0) {
+      return [
+        { id: 1, name: 'Assignment 2 Deadline', date: '3/21/25', color: '#e8f5e9' },
+        { id: 2, name: 'Midterm 1', date: '3/24/25', color: '#ffebee' },
+        { id: 3, name: 'Requested Extension Assignment 2', date: '3/27/25', aiSuggested: '3/23/25', color: '#fff8e1' }
+      ];
+    }
+    
+    return deadlines;
+  };
+  
+  // Get any existing notes from the data
+  const getInitialNotes = () => {
+    const noteField = Object.keys(original || {}).find(key => 
+      key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')
+    );
+    
+    return noteField ? original[noteField] : "";
+  };
+  
+  const deadlines = getDeadlines();
+  const additionalInfo = getAdditionalInfo();
   
   return (
     <Box sx={{ height: '100%' }}>
@@ -108,6 +180,7 @@ const StudentDetails = ({ student, onClose }) => {
         <Grid item xs={12} md={6}>
           {/* Student Profile */}
           <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+            {/* Basic info with avatar */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <Avatar 
                 src={student.avatar} 
@@ -137,6 +210,22 @@ const StudentDetails = ({ student, onClose }) => {
                 )}
               </Box>
             </Box>
+            
+            {/* Additional info from the roster */}
+            {additionalInfo.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Divider sx={{ mb: 2 }} />
+                <Typography variant="subtitle1" sx={{ mb: 1 }}>Additional Information</Typography>
+                <Grid container spacing={2}>
+                  {additionalInfo.map((info, index) => (
+                    <Grid item xs={12} sm={6} key={index}>
+                      <Typography variant="body2" color="text.secondary">{info.label}</Typography>
+                      <Typography variant="body1">{info.value}</Typography>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
           </Paper>
           
           {/* Calendar */}
@@ -236,10 +325,18 @@ const StudentDetails = ({ student, onClose }) => {
               multiline
               rows={4}
               placeholder="Add notes about this student..."
-              value={notes}
+              defaultValue={getInitialNotes()}
+              value={notes || getInitialNotes()}
               onChange={(e) => setNotes(e.target.value)}
               variant="outlined"
             />
+            {notes !== getInitialNotes() && notes !== '' && (
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button variant="contained" size="small">
+                  Save Notes
+                </Button>
+              </Box>
+            )}
           </Paper>
         </Grid>
       </Grid>
@@ -260,42 +357,76 @@ export default function Students() {
   }
 
   async function getData() {
+    setLoading(true);
+    setError('');
+    
     let studentRosterId = localStorage.getItem("studentRoster");
+    
     try {
       if (!studentRosterId) {
-        console.error("Sheet IDs are missing");
+        setError("No student roster spreadsheet configured. Please set a Student Roster link in Settings.");
+        setLoading(false);
         return;
       }
-      else {
-        studentRosterId = extractSheetIdFromUrl(studentRosterId);
+      
+      // Extract the sheet ID from the URL
+      studentRosterId = extractSheetIdFromUrl(studentRosterId);
+      if (!studentRosterId) {
+        setError("Invalid Google Sheets URL. Please check the Student Roster URL in Settings.");
+        setLoading(false);
+        return;
       }
-
-      const [students] = await Promise.all([
-        gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: studentRosterId,
-          range: "Roster!A1:E500",
-        }),
-      ]);
-
-      const data = students.result.values || [];
-      const rowNames = data[0];
-      const studentData = data.slice(1);
-
-      const parsedStudents = studentData.map((student, i) => {
-        const obj = {};
-        rowNames.forEach((name, j) => {
-          obj[name] = student[j];
-        });
-        obj["ind"] = i;
-        return obj;
+      
+      console.log("Fetching roster data from spreadsheet ID:", studentRosterId);
+      
+      // Try to fetch with a wider range to ensure we get all data
+      const response = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: studentRosterId,
+        range: "Roster!A1:Z500", // Wider range to capture more columns
       });
 
-      console.log("Students data:", parsedStudents);
-      setRosterData(parsedStudents);
+      const data = response.result.values || [];
+      
+      if (data.length === 0) {
+        setError("The student roster spreadsheet appears to be empty.");
+        setLoading(false);
+        return;
+      }
+      
+      const headerRow = data[0];
+      const studentRows = data.slice(1);
 
+      console.log("Headers found:", headerRow);
+      console.log("Student rows found:", studentRows.length);
+      
+      // Convert array data to objects with named properties
+      const parsedStudents = studentRows.map((studentRow, index) => {
+        const studentObj = {};
+        
+        // Map each column to its header name
+        headerRow.forEach((headerName, colIndex) => {
+          // Ensure we don't access beyond the array bounds
+          if (colIndex < studentRow.length) {
+            studentObj[headerName] = studentRow[colIndex];
+          } else {
+            studentObj[headerName] = ''; // Default empty value
+          }
+        });
+        
+        // Add index for reference
+        studentObj.rowIndex = index;
+        
+        return studentObj;
+      });
+
+      console.log("Processed student data:", parsedStudents);
+      setRosterData(parsedStudents);
       setLoading(false);
+      
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Error loading student roster data:", error);
+      setError(`Failed to load student data: ${error.message || 'Unknown error'}`);
+      setLoading(false);
     }
   }
 
@@ -352,19 +483,51 @@ export default function Students() {
 
   // Process student data to include flags
   const processedStudentData = useMemo(() => {
+    console.log("Processing roster data:", rosterData);
+    
     return rosterData.map((student, index) => {
-      // Check for DSP status (sample logic)
-      const isDSP = student.DSP === 'Yes' || student.Accommodations === 'Yes';
+      // Check for columns with different possible names
+      const getName = () => {
+        return student.Name || student["Full Name"] || student["Student Name"] || 
+               `${student["First Name"] || ''} ${student["Last Name"] || ''}`.trim() || 
+               "Unknown Student";
+      };
       
-      // Check for students who need support (sample logic)
-      const needsSupport = student.GPA && parseFloat(student.GPA) < 2.5;
+      const getEmail = () => {
+        return student.Email || student["Email Address"] || student["Student Email"] || 
+               "";
+      };
+      
+      const getSID = () => {
+        return student.SID || student["Student ID"] || student["ID Number"] || 
+               index.toString();
+      };
+      
+      // Check for DSP status (we look at various possible column names)
+      const isDSP = (
+        (student.DSP && student.DSP.toLowerCase().includes('yes')) ||
+        (student.Accommodations && student.Accommodations.toLowerCase().includes('yes')) ||
+        (student["Special Needs"] && student["Special Needs"].toLowerCase().includes('yes')) ||
+        (student["Accommodations"] && student["Accommodations"].toLowerCase().includes('yes'))
+      );
+      
+      // Check for students who need support (looking for various indicators)
+      const needsSupport = (
+        (student.GPA && parseFloat(student.GPA) < 2.5) ||
+        (student["At Risk"] && student["At Risk"].toLowerCase().includes('yes')) ||
+        (student["Needs Support"] && student["Needs Support"].toLowerCase().includes('yes'))
+      );
+      
+      const name = getName();
+      const email = getEmail();
+      const sid = getSID();
       
       return {
         id: index,
-        sid: student.SID,
-        name: student.Name,
-        email: student.Email,
-        avatar: getAvatar(student.Name),
+        sid: sid,
+        name: name,
+        email: email,
+        avatar: getAvatar(name),
         flags: [
           ...(isDSP ? ['DSP'] : []),
           ...(needsSupport ? ['Needs Support'] : [])
