@@ -13,7 +13,7 @@ import "./Sidebar.css";
 const navItems = [
   { text: "Dashboard", icon: <Home />, path: "/dashboard" },
   { text: "Students", icon: <People />, path: "/students" },
-  { text: "AI Suggestion", icon: <AutoAwesome />, path: "/aisuggestion" },
+  // { text: "AI Suggestion", icon: <AutoAwesome />, path: "/aisuggestion" },
   { text: "Assignments", icon: <EventNote />, path: "/assignments" },
   // { text: "Calendar", icon: <Today />, path: "/calendar" },
   { text: "Settings", icon: <Settings />, path: "/settings" },

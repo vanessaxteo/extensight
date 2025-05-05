@@ -130,7 +130,7 @@ export default function SheetVisualizer({ sheetUrl, range = "Sheet1!A1:Z100" }) 
     <Container maxWidth="md" sx={{ py: 5 }}>
       <Paper elevation={3} sx={{ p: 4, borderRadius: 4 }}>
         <Typography variant="h5" gutterBottom>
-          📊 Extension Frequency Visualization
+          Extension Frequency Visualization
         </Typography>
 
         <Box sx={{ mt: 3, mb: 4 }}>
