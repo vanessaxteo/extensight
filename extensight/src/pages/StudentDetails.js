@@ -202,8 +202,8 @@ const StudentDetails = () => {
                 <TableCell>{student["Email"]}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell><strong>Role</strong></TableCell>
-                <TableCell>{student["Role"]}</TableCell>
+                <TableCell><strong>Flags</strong></TableCell>
+                <TableCell>{student["Flags"]}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell><strong>Sections</strong></TableCell>

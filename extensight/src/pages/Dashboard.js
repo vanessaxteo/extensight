@@ -19,9 +19,13 @@ export default function Dashboard() {
             </div>
             <div class="summary-content" id="summaryContent">
               {/* FILL IN THE BLANKS */}
-              <p class="summary-text">
+              {/* <p class="summary-text">
                 In the past month, there were a total of <strong>__</strong> extensions (<strong>UP/DOWN __ </strong> from last month), where
                 <strong> __</strong> were approved, <strong>__ (__%)</strong> were flagged with high frequency requests.
+              </p> */}
+              <p class="summary-text">
+                In the past month, there were a total of <strong>154</strong> extensions (<strong>UP 18</strong> from last month), where
+                <strong> 112</strong> were approved, <strong>26 (16.9%)</strong> were flagged with high frequency requests.
               </p>
 
               {/* Gray info-box, modify with summaries powered by Noggin! */}

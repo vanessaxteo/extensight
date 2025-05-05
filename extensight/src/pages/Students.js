@@ -39,7 +39,7 @@ export default function Students() {
       const [students] = await Promise.all([
         gapi.client.sheets.spreadsheets.values.get({
           spreadsheetId: studentRosterId,
-          range: "Roster!A1:E500",
+          range: "Sheet1!A1:F500",
         }),
       ]);
 
@@ -114,6 +114,7 @@ export default function Students() {
                 <TableCell>Name</TableCell>
                 <TableCell>SID</TableCell>
                 <TableCell>Email Address</TableCell>
+                <TableCell>Flags</TableCell>
                 <TableCell>Action</TableCell>
               </TableRow>
             </TableHead>
@@ -123,6 +124,7 @@ export default function Students() {
                   <TableCell>{student.Name}</TableCell>
                   <TableCell>{student.SID}</TableCell>
                   <TableCell>{student.Email}</TableCell>
+                  <TableCell>{student.Flags}</TableCell>
                   <TableCell>
                     <Link
                       to={`/student/${student.SID}`}
