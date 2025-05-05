@@ -3,6 +3,17 @@ import { Routes, Route, Outlet, Link } from "react-router-dom"; // Import Link f
 import Sidebar from "../components/sidebar/Sidebar";
 import { gapi } from "gapi-script";
 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+} from "@mui/material";
+
+
 let tokenClient;
 
 export default function Students() {
@@ -93,33 +104,44 @@ export default function Students() {
   return (
     <div style={{ display: "flex" }}>
       <Sidebar />
-      <main style={{ flexGrow: 1, padding: "1rem" }}>
-        <h2>Students</h2>
-        <table border="1" cellPadding="8" width="100%">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>SID</th>
-              <th>Email Address</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rosterData.map((student, index) => (
-              <tr key={index}>
-                <td>{student.Name}</td>
-                <td>{student.SID}</td>
-                <td>{student.Email}</td>
-                <td>
-                  <Link to={`/student/${student.SID}`} state={{data: rosterData.filter(s => s.SID == student.SID)[0]}}>
-                    <button>View Details</button>
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <main style={{ flexGrow: 1, padding: "2rem" }}>
+        <h1>Students</h1>
+  
+        <TableContainer sx={{ width: "80%", marginBottom: "2rem" }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>SID</TableCell>
+                <TableCell>Email Address</TableCell>
+                <TableCell>Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rosterData.map((student, index) => (
+                <TableRow key={index}>
+                  <TableCell>{student.Name}</TableCell>
+                  <TableCell>{student.SID}</TableCell>
+                  <TableCell>{student.Email}</TableCell>
+                  <TableCell>
+                    <Link
+                      to={`/student/${student.SID}`}
+                      state={{
+                        data: rosterData.find((s) => s.SID === student.SID),
+                      }}
+                      style={{ textDecoration: "none" }}
+                    >
+                      <Button variant="contained" size="small">
+                        View Details
+                      </Button>
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </main>
     </div>
-  );
+  );  
 }

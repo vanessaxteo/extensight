@@ -117,15 +117,17 @@ export default function SheetVisualizer({ sheetUrl, range = "Sheet1!A1:Z100" }) 
     <Container maxWidth="md" sx={{ py: 5 }}>
       <Paper elevation={3} sx={{ p: 4, borderRadius: 4 }}>
         <Typography variant="h5" gutterBottom>
-          📊 Column Frequency Visualization
+          📊 Extension Frequency Visualization
         </Typography>
 
         <Box sx={{ mt: 3, mb: 4 }}>
           <FormControl fullWidth>
-            <InputLabel>Select Column</InputLabel>
+            <InputLabel id="column-select-label">Add a visualization for</InputLabel>
             <Select
+              labelId="column-select-label"
+              id="column-select"
               value={selectedColumn}
-              label="Select Column"
+              label="Add a visualization for"
               onChange={(e) => setSelectedColumn(e.target.value)}
             >
               {headers.map((header) => (
@@ -144,7 +146,7 @@ export default function SheetVisualizer({ sheetUrl, range = "Sheet1!A1:Z100" }) 
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="count" fill="#8884d8" />
+            <Bar dataKey="count" fill="#0041cc" />
           </BarChart>
         </ResponsiveContainer>
       </Paper>

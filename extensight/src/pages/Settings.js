@@ -8,7 +8,6 @@ export default function Settings() {
       <Sidebar />
       <main style={{ flexGrow: 1, padding: "1rem" }}>
         <h2>Settings</h2>
-        <SheetVisualizer sheetUrl={localStorage.getItem("extensionsSheet")} />
       </main>
     </div>
   );
