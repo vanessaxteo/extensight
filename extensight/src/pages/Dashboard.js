@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, Outlet } from 'react-router-dom';
 import Sidebar from "../components/sidebar/Sidebar";
+import SheetVisualizer from "../components/SheetsChart";
 
 export default function Dashboard() {
   return (
@@ -11,7 +12,7 @@ export default function Dashboard() {
           {/* Summary Section */}
           <div class="summary-section">
             <div class="summary-header">
-              <h2>Summary of Extension Insights</h2>
+              <h1>Summary of Extension Insights</h1>
               <button class="toggle-btn" id="summaryToggle">
                 <i class="icon lucide-chevron-down"></i>
               </button>
@@ -74,55 +75,9 @@ export default function Dashboard() {
             <h2>Visualizations</h2>
 
             {/* Visualization Controls */}
-            <div class="visualization-controls">
-              <p>Add a visualization for</p>
-              <div class="control-row">
-                <div class="select-container">
-                  <select>
-                    <option>Select metric</option>
-                  </select>
-                  <i class="icon lucide-chevron-down"></i>
-                </div>
-
-                <span class="vs">vs.</span>
-
-                <div class="select-container">
-                  <select>
-                    <option>Select metric</option>
-                  </select>
-                  <i class="icon lucide-chevron-down"></i>
-                </div>
-
-                <button class="add-btn">Add</button>
-              </div>
-            </div>
-
-            {/* Chart */}
-            <div class="chart-container">
-              <h3>Extensions by Assignment</h3>
-              <div class="chart">
-                <div class="bar-group">
-                  <div class="bar" style={{height: "120px"}}></div>
-                  <div class="bar-label">HW 1</div>
-                  <div class="bar-value">18</div>
-                </div>
-                <div class="bar-group">
-                  <div class="bar" style={{height: "150px"}}></div>
-                  <div class="bar-label">Project 1</div>
-                  <div class="bar-value">23</div>
-                </div>
-                <div class="bar-group">
-                  <div class="bar" style={{height: "170px"}}></div>
-                  <div class="bar-label">HW 2</div>
-                  <div class="bar-value">25</div>
-                </div>
-                <div class="bar-group">
-                  <div class="bar" style={{height: "140px"}}></div>
-                  <div class="bar-label">Project 2</div>
-                  <div class="bar-value">20</div>
-                </div>
-              </div>
-            </div>
+            <SheetVisualizer sheetUrl={localStorage.getItem("extensionsSheet")} />
+              
+            
           </div>
         </div>
       </main>
