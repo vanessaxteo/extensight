@@ -3,6 +3,17 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/sidebar/Sidebar";
 import { gapi } from "gapi-script";
 
+import {
+  TableContainer,
+  Table,
+  TableBody,
+  TableRow,
+  TableCell,
+  Button,
+  Box,
+  Paper,
+} from "@mui/material";
+
 let tokenClient;
 
 const StudentDetails = () => {
@@ -164,71 +175,94 @@ const StudentDetails = () => {
   return (
     <div style={{ display: "flex" }}>
       <Sidebar />
-      <main style={{ flexGrow: 1, padding: "1rem" }}>
-        <h2>Student Details</h2>
+      <main style={{ flexGrow: 1, padding: "2rem" }}>
+        <h1>Student Details</h1>
 
-        <button onClick={() => navigate("/students")}>Back to Students</button> 
+        <Button
+          variant="outlined"
+          onClick={() => navigate("/students")}
+          sx={{ marginBottom: "1rem" }}
+        >
+          Back to Students
+        </Button>
 
-        <table border="1" cellPadding="8">
-          <tbody>
-            <tr>
-              <td><strong>Name</strong></td>
-              <td>{student["Name"]}</td>
-            </tr>
-            <tr>
-              <td><strong>SID</strong></td>
-              <td>{student["SID"]}</td>
-            </tr>
-            <tr>
-              <td><strong>Email Address</strong></td>
-              <td>{student["Email"]}</td>
-            </tr>
-            <tr>
-              <td><strong>Role</strong></td>
-              <td>{student["Role"]}</td>
-            </tr>
-            <tr>
-              <td><strong>Sections</strong></td>
-              <td>{student["Sections"]}</td>
-            </tr>
-          </tbody>
-        </table>
-        <div>
-          AI Recommendation
-          <br />
-          {aiRecommendation != "" ? aiRecommendation : "Loading AI Recommendation..."}
-        </div>
-        <div>
-          Due Dates
-          {
-            assignments.map((assignment, i) => {
-              const approvedExtensions = extensionsData.filter(ext => (ext["Approved?"] == "Yes") && (ext["If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?"] == assignment["name"]))
-                .map(ext => ext["What date are you requesting an extension to?"])
-                .sort();
-              const requestedExtensions = extensionsData.filter(ext => ext["Approved?"] == undefined && (ext["If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?"] == assignment["name"]))
-                .map(ext => ext["What date are you requesting an extension to?"])
-                .sort();
+        <TableContainer component={Paper} sx={{ width: "80%", marginBottom: "2rem" }}>
+          <Table>
+            <TableBody>
+              <TableRow>
+                <TableCell><strong>Name</strong></TableCell>
+                <TableCell>{student["Name"]}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell><strong>SID</strong></TableCell>
+                <TableCell>{student["SID"]}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell><strong>Email Address</strong></TableCell>
+                <TableCell>{student["Email"]}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell><strong>Role</strong></TableCell>
+                <TableCell>{student["Role"]}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell><strong>Sections</strong></TableCell>
+                <TableCell>{student["Sections"]}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-              let displayedDate = assignment["due_date"];
+        <Box sx={{ width: "80%", marginBottom: "2rem", padding: "1rem", backgroundColor: "#f5f5f5", borderRadius: 2 }}>
+          <h3>AI Recommendation</h3>
+          <p>{aiRecommendation !== "" ? aiRecommendation : "Loading AI Recommendation..."}</p>
+        </Box>
 
-              if (approvedExtensions.length > 0) {
-                displayedDate = approvedExtensions.at(-1) + " (Extended)"
-              }
-              if (requestedExtensions.length > 0) {
-                displayedDate += ", Pending Extension Request: " + requestedExtensions.at(-1)
-              }
+        <Box sx={{ width: "80%", padding: "1rem", backgroundColor: "#f5f5f5", borderRadius: 2 }}>
+          <h3>Due Dates</h3>
+          {assignments.map((assignment, i) => {
+            const approvedExtensions = extensionsData
+              .filter(
+                (ext) =>
+                  ext["Approved?"] === "Yes" &&
+                  ext[
+                    "If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?"
+                  ] === assignment["name"]
+              )
+              .map((ext) => ext["What date are you requesting an extension to?"])
+              .sort();
 
-              return (  
-                <div>
-                  {assignment["name"]} -- {displayedDate}
-                </div>
-              );
-            })
-          }
-        </div>
+            const requestedExtensions = extensionsData
+              .filter(
+                (ext) =>
+                  ext["Approved?"] === undefined &&
+                  ext[
+                    "If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?"
+                  ] === assignment["name"]
+              )
+              .map((ext) => ext["What date are you requesting an extension to?"])
+              .sort();
+
+            let displayedDate = assignment["due_date"];
+
+            if (approvedExtensions.length > 0) {
+              displayedDate = approvedExtensions.at(-1) + " (Extended)";
+            }
+            if (requestedExtensions.length > 0) {
+              displayedDate +=
+                ", Pending Extension Request: " + requestedExtensions.at(-1);
+            }
+
+            return (
+              <div key={i} style={{ marginBottom: "0.5rem" }}>
+                <strong>{assignment["name"]}</strong> — {displayedDate}
+              </div>
+            );
+          })}
+        </Box>
       </main>
     </div>
   );
-};
+}
 
 export default StudentDetails;

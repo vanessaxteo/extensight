@@ -7,7 +7,7 @@ export default function Settings() {
     <div style={{ display: "flex" }}>
       <Sidebar />
       <main style={{ flexGrow: 1, padding: "1rem" }}>
-        <h2>Settings</h2>
+        <h1>Settings</h1>
       </main>
     </div>
   );

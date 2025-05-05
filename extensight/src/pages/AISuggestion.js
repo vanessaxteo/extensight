@@ -50,7 +50,7 @@ export default function AISuggestion() {
     <div className="dashboard">
       <Sidebar />
       <main className="mainContent">
-        <h1 className="pageTitle">AI Suggestion</h1>
+        <h1>AI Suggestion</h1>
         <button onClick={fetchAIResponse} className="requestButton">
           Request AI Suggestion
         </button>

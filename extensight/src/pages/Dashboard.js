@@ -12,7 +12,7 @@ export default function Dashboard() {
           {/* Summary Section */}
           <div class="summary-section">
             <div class="summary-header">
-              <h2>Summary of Extension Insights</h2>
+              <h1>Summary of Extension Insights</h1>
               <button class="toggle-btn" id="summaryToggle">
                 <i class="icon lucide-chevron-down"></i>
               </button>
