@@ -25,13 +25,17 @@ export default function Dashboard() {
 
         // import fetch from 'node-fetch'; // for node.js
 
+        const dashboardKey = process.env.REACT_APP_DASHBOARD;
+        console.log("FULL ENV:", process.env);
+        console.log("DASHBOARD:", process.env.REACT_APP_DASHBOARD); 
+
         const res = await fetch(
           'https://noggin.rea.gent/big-mink-8289',
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer rg_v1_v1uzeg8u3tp6t4y6y48dufva3qzb0xpj54q1_ngk`,
+              Authorization: `Bearer ${dashboardKey}`,
             },
             body: JSON.stringify({
               // fill variables here.
@@ -43,7 +47,8 @@ export default function Dashboard() {
         );
 
         const json = await res.json();
-        setSummaryData(json.chat_response);
+        setSummaryData(json);
+        console.log("Received data:", json);  // Check the API response
       } catch (err) {
         console.error("Noggin fetch error:", err);
       }
@@ -69,12 +74,12 @@ export default function Dashboard() {
               {/* FILL IN THE BLANKS */}
               <p className="summary-text">
                 {summaryData ? (
-                  <>
+                  <span>
                     In the past month, there were a total of <strong>{summaryData.total_extensions}</strong> extensions (
                     <strong>{summaryData.plus_minus}</strong> from last month), where
                     <strong> {summaryData.approved}</strong> were approved,
                     <strong> {summaryData.flagged} ({summaryData.flagged_percent}%)</strong> were flagged with high frequency requests.
-                  </>
+                  </span>
                 ) : "Loading summary..."}
               </p>
               
@@ -83,29 +88,29 @@ export default function Dashboard() {
               <div class="info-box">
                 <div class="info-section">
                   <h3>Assignments of Concern</h3>
-                  <ul>
-                    {summaryData?.assignments_of_concern?.map((item, i) => (
-                      <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
-                    ))}
-                  </ul>
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: (summaryData?.assignments_of_concern || "No assignment concern data available.").replace(/\n/g, "<br />"),
+                    }}
+                  />
                 </div>
 
                 <div class="info-section">
                   <h3>Student Risk Overview</h3>
-                  <ul>
-                    {summaryData?.student_risk?.map((item, i) => (
-                      <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
-                    ))}
-                  </ul>
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: (summaryData?.student_risk || "No assignment concern data available.").replace(/\n/g, "<br />"),
+                    }}
+                  />
                 </div>
 
                 <div class="info-section">
                   <h3>Assignment Conflict Overview</h3>
-                  <ul>
-                    {summaryData?.assignment_conflict_overview?.map((item, i) => (
-                      <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
-                    ))}
-                  </ul>
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: (summaryData?.assignment_conflict_overview || "No assignment concern data available.").replace(/\n/g, "<br />"),
+                    }}
+                  />
                 </div>
                 
                 {/* ADD NEW "info-section" div for each summary! */}
