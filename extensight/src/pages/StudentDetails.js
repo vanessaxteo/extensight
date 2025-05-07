@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/sidebar/Sidebar";
 import { gapi } from "gapi-script";
-
 import {
   TableContainer,
   Table,
@@ -14,6 +13,14 @@ import {
   Paper,
 } from "@mui/material";
 
+const [examsRes] = await Promise.all([
+  fetch("/data/exam_dates.csv"),
+]);
+
+const [examsText] = await Promise.all([
+  examsRes.text(),
+]);
+
 let tokenClient;
 
 const StudentDetails = () => {
@@ -21,6 +28,7 @@ const StudentDetails = () => {
   const [student, setStudent] = useState();
   const [assignments, setAssignments] = useState([]);
   const [extensionsData, setExtensionsData] = useState([]);
+  const [studentExtensions, setStudentExtensions] = useState([]);
   const [aiRecommendation, setAIRecommendation] = useState("");
 
   const navigate = useNavigate();
@@ -33,20 +41,22 @@ const StudentDetails = () => {
 
   async function getAISuggestions(assignments, extensions) {
     const response = await fetch(
-      'https://noggin.rea.gent/desperate-marlin-9059',
+      "https://noggin.rea.gent/desperate-marlin-9059",
       {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer rg_v1_g4jj91fakulvx5dnznona44ynxvgsw1oxqlh_ngk',
+          "Content-Type": "application/json",
+          Authorization: "Bearer rg_v1_f7291okni1n4ji0pc5p8t7zqx4xkrsaauhw7_ngk",
         },
         body: JSON.stringify({
-          "student_extensions": JSON.stringify(extensions),
-          "assignments": JSON.stringify(assignments),
-          "student": student
+          assignments: JSON.stringify(assignments),
+          student: student,
+          student_extensions: JSON.stringify(extensions),
+          exam_dates: examsText
         }),
       }
-    ).then(response => response.text());
+    ).then((res) => res.text());
+
     console.log(response);
     setAIRecommendation(response);
     return response;
@@ -54,7 +64,7 @@ const StudentDetails = () => {
 
   async function getData(assignmentsSheetId, extensionsSheetId) {
     try {
-      const [resAssignments, resDueDates] = await Promise.all([
+      const [resAssignments, resDueDates, resExtensions] = await Promise.all([
         gapi.client.sheets.spreadsheets.values.get({
           spreadsheetId: assignmentsSheetId,
           range: "Sheet1!A2:A100",
@@ -62,6 +72,10 @@ const StudentDetails = () => {
         gapi.client.sheets.spreadsheets.values.get({
           spreadsheetId: assignmentsSheetId,
           range: "Sheet1!B2:B100",
+        }),
+        gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: extensionsSheetId,
+          range: "Sheet1!A1:J500",
         }),
       ]);
 
@@ -77,11 +91,6 @@ const StudentDetails = () => {
 
       console.log("Assignments:", newAssignments);
       setAssignments(newAssignments);
-
-      const resExtensions = await gapi.client.sheets.spreadsheets.values.get({
-        spreadsheetId: extensionsSheetId,
-        range: "Sheet1!A1:J500",
-      });
 
       const data = resExtensions.result.values || [];
       const rowNames = data[0];
@@ -101,7 +110,7 @@ const StudentDetails = () => {
 
       setLoading(false);
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Error loading data:", JSON.stringify(error, null, 2));
     }
   }
 
@@ -120,10 +129,6 @@ const StudentDetails = () => {
       const assignmentsSheetUrl = localStorage.getItem("assignmentsSheet");
       const extensionsSheetUrl = localStorage.getItem("extensionsSheet");
 
-      console.log("Stored token:", storedToken);
-      console.log("Assignments sheet URL:", assignmentsSheetUrl);
-      console.log("Extensions sheet URL:", extensionsSheetUrl);
-
       if (!assignmentsSheetUrl || !extensionsSheetUrl) {
         console.error("Missing Google Sheet URLs in localStorage.");
         return;
@@ -136,8 +141,6 @@ const StudentDetails = () => {
       if (storedToken && storedTokenExp && currTime.getTime() < storedTokenExp) {
         gapi.client.setToken({ access_token: storedToken });
         getData(assignmentsSheetId, extensionsSheetId);
-        setExtensionsData(extensionsData.filter(ext => ext["SID"] == student["SID"]));
-        
       } else {
         tokenClient = window.google.accounts.oauth2.initTokenClient({
           client_id:
@@ -146,30 +149,31 @@ const StudentDetails = () => {
           callback: (tokenResponse) => {
             gapi.client.setToken({ access_token: tokenResponse.access_token });
             localStorage.setItem("token", tokenResponse.access_token);
-            localStorage.setItem("tokenExpiry", currTime.getTime() + 3550000)
-            getData();
-            setExtensionsData(extensionsData.filter(ext => ext["SID"] == student["SID"]));
+            localStorage.setItem("tokenExpiry", currTime.getTime() + 3550000);
+            getData(assignmentsSheetId, extensionsSheetId);
           },
         });
         tokenClient.requestAccessToken();
       }
-
-
     });
-
-
   }, [location]);
-  
+
   useEffect(() => {
-    if (assignments.length > 0 && extensionsData.length > 0 && student) {
-      const filteredExtensions = extensionsData.filter(ext => ext["SID"] === student["SID"]);
-      getAISuggestions(assignments, filteredExtensions);
+    if (student && extensionsData.length > 0) {
+      const filtered = extensionsData.filter(
+        (ext) => ext["SID"] === student["SID"]
+      );
+      setStudentExtensions(filtered);
     }
-  }, [assignments, extensionsData, student]);
+  }, [extensionsData, student]);
+
+  useEffect(() => {
+    if (assignments.length > 0 && studentExtensions.length > 0 && student) {
+      getAISuggestions(assignments, studentExtensions);
+    }
+  }, [assignments, studentExtensions, student]);
 
   if (loading) return <div>Loading student details...</div>;
-  
-
   if (!student) return null;
 
   return (
@@ -186,42 +190,77 @@ const StudentDetails = () => {
           Back to Students
         </Button>
 
-        <TableContainer component={Paper} sx={{ width: "80%", marginBottom: "2rem" }}>
+        <TableContainer
+          component={Paper}
+          sx={{ width: "80%", marginBottom: "2rem" }}
+        >
           <Table>
             <TableBody>
               <TableRow>
-                <TableCell><strong>Name</strong></TableCell>
+                <TableCell>
+                  <strong>Name</strong>
+                </TableCell>
                 <TableCell>{student["Name"]}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell><strong>SID</strong></TableCell>
+                <TableCell>
+                  <strong>SID</strong>
+                </TableCell>
                 <TableCell>{student["SID"]}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell><strong>Email Address</strong></TableCell>
+                <TableCell>
+                  <strong>Email Address</strong>
+                </TableCell>
                 <TableCell>{student["Email"]}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell><strong>Flags</strong></TableCell>
+                <TableCell>
+                  <strong>Flags</strong>
+                </TableCell>
                 <TableCell>{student["Flags"]}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell><strong>Sections</strong></TableCell>
+                <TableCell>
+                  <strong>Sections</strong>
+                </TableCell>
                 <TableCell>{student["Sections"]}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
         </TableContainer>
 
-        <Box sx={{ width: "80%", marginBottom: "2rem", padding: "1rem", backgroundColor: "#f5f5f5", borderRadius: 2 }}>
+        <Box
+          sx={{
+            width: "80%",
+            marginBottom: "2rem",
+            padding: "1rem",
+            backgroundColor: "#f5f5f5",
+            borderRadius: 2,
+          }}
+        >
           <h3>AI Recommendation</h3>
-          <p>{aiRecommendation !== "" ? aiRecommendation : "Loading AI Recommendation..."}</p>
+          <p>
+            {aiRecommendation !== ""
+              ? aiRecommendation.replace(
+                  /\*\*Recommendation:\*\*/g,
+                  "Recommendation:"
+                )
+              : "Loading AI Recommendation..."}
+          </p>
         </Box>
 
-        <Box sx={{ width: "80%", padding: "1rem", backgroundColor: "#f5f5f5", borderRadius: 2 }}>
+        <Box
+          sx={{
+            width: "80%",
+            padding: "1rem",
+            backgroundColor: "#f5f5f5",
+            borderRadius: 2,
+          }}
+        >
           <h3>Due Dates</h3>
           {assignments.map((assignment, i) => {
-            const approvedExtensions = extensionsData
+            const approvedExtensions = studentExtensions
               .filter(
                 (ext) =>
                   ext["Approved?"] === "Yes" &&
@@ -229,18 +268,22 @@ const StudentDetails = () => {
                     "If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?"
                   ] === assignment["name"]
               )
-              .map((ext) => ext["What date are you requesting an extension to?"])
+              .map(
+                (ext) => ext["What date are you requesting an extension to?"]
+              )
               .sort();
 
-            const requestedExtensions = extensionsData
+            const requestedExtensions = studentExtensions
               .filter(
                 (ext) =>
-                  ext["Approved?"] === undefined &&
+                  !ext["Approved?"] &&
                   ext[
                     "If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?"
                   ] === assignment["name"]
               )
-              .map((ext) => ext["What date are you requesting an extension to?"])
+              .map(
+                (ext) => ext["What date are you requesting an extension to?"]
+              )
               .sort();
 
             let displayedDate = assignment["due_date"];
@@ -263,6 +306,6 @@ const StudentDetails = () => {
       </main>
     </div>
   );
-}
+};
 
 export default StudentDetails;
