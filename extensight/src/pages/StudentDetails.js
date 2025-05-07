@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/sidebar/Sidebar";
 import { gapi } from "gapi-script";
 
@@ -21,6 +21,7 @@ const StudentDetails = () => {
   const [student, setStudent] = useState();
   const [assignments, setAssignments] = useState([]);
   const [extensionsData, setExtensionsData] = useState([]);
+  const [studentExtensions, setStudentExtensions] = useState([]);
   const [aiRecommendation, setAIRecommendation] = useState("");
 
   const navigate = useNavigate();
@@ -120,10 +121,6 @@ const StudentDetails = () => {
       const assignmentsSheetUrl = localStorage.getItem("assignmentsSheet");
       const extensionsSheetUrl = localStorage.getItem("extensionsSheet");
 
-      console.log("Stored token:", storedToken);
-      console.log("Assignments sheet URL:", assignmentsSheetUrl);
-      console.log("Extensions sheet URL:", extensionsSheetUrl);
-
       if (!assignmentsSheetUrl || !extensionsSheetUrl) {
         console.error("Missing Google Sheet URLs in localStorage.");
         return;
@@ -136,8 +133,6 @@ const StudentDetails = () => {
       if (storedToken && storedTokenExp && currTime.getTime() < storedTokenExp) {
         gapi.client.setToken({ access_token: storedToken });
         getData(assignmentsSheetId, extensionsSheetId);
-        setExtensionsData(extensionsData.filter(ext => ext["SID"] == student["SID"]));
-        
       } else {
         tokenClient = window.google.accounts.oauth2.initTokenClient({
           client_id:
@@ -146,30 +141,29 @@ const StudentDetails = () => {
           callback: (tokenResponse) => {
             gapi.client.setToken({ access_token: tokenResponse.access_token });
             localStorage.setItem("token", tokenResponse.access_token);
-            localStorage.setItem("tokenExpiry", currTime.getTime() + 3550000)
-            getData();
-            setExtensionsData(extensionsData.filter(ext => ext["SID"] == student["SID"]));
+            localStorage.setItem("tokenExpiry", currTime.getTime() + 3550000);
+            getData(assignmentsSheetId, extensionsSheetId);
           },
         });
         tokenClient.requestAccessToken();
       }
-
-
     });
-
-
   }, [location]);
-  
+
   useEffect(() => {
-    if (assignments.length > 0 && extensionsData.length > 0 && student) {
-      const filteredExtensions = extensionsData.filter(ext => ext["SID"] === student["SID"]);
-      getAISuggestions(assignments, filteredExtensions);
+    if (student && extensionsData.length > 0) {
+      const filtered = extensionsData.filter(ext => ext["SID"] === student["SID"]);
+      setStudentExtensions(filtered);
     }
-  }, [assignments, extensionsData, student]);
+  }, [extensionsData, student]);
+
+  useEffect(() => {
+    if (assignments.length > 0 && studentExtensions.length > 0 && student) {
+      getAISuggestions(assignments, studentExtensions);
+    }
+  }, [assignments, studentExtensions, student]);
 
   if (loading) return <div>Loading student details...</div>;
-  
-
   if (!student) return null;
 
   return (
@@ -215,13 +209,17 @@ const StudentDetails = () => {
 
         <Box sx={{ width: "80%", marginBottom: "2rem", padding: "1rem", backgroundColor: "#f5f5f5", borderRadius: 2 }}>
           <h3>AI Recommendation</h3>
-          <p>{aiRecommendation !== "" ? aiRecommendation : "Loading AI Recommendation..."}</p>
+          <p>
+            {aiRecommendation !== ""
+              ? aiRecommendation.replace(/\*\*Recommendation:\*\*/g, "Recommendation:")
+              : "Loading AI Recommendation..."}
+          </p>
         </Box>
 
         <Box sx={{ width: "80%", padding: "1rem", backgroundColor: "#f5f5f5", borderRadius: 2 }}>
           <h3>Due Dates</h3>
           {assignments.map((assignment, i) => {
-            const approvedExtensions = extensionsData
+            const approvedExtensions = studentExtensions
               .filter(
                 (ext) =>
                   ext["Approved?"] === "Yes" &&
@@ -232,10 +230,10 @@ const StudentDetails = () => {
               .map((ext) => ext["What date are you requesting an extension to?"])
               .sort();
 
-            const requestedExtensions = extensionsData
+            const requestedExtensions = studentExtensions
               .filter(
                 (ext) =>
-                  ext["Approved?"] === undefined &&
+                  !ext["Approved?"] &&
                   ext[
                     "If you anticipate needing an extension on certain assignments, what assignment do you need to extend, and what day are you requesting to extend them until?"
                   ] === assignment["name"]
@@ -263,6 +261,6 @@ const StudentDetails = () => {
       </main>
     </div>
   );
-}
+};
 
 export default StudentDetails;
