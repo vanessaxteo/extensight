@@ -39,7 +39,7 @@ export default function Students() {
       const [students] = await Promise.all([
         gapi.client.sheets.spreadsheets.values.get({
           spreadsheetId: studentRosterId,
-          range: "Roster!A1:E500",
+          range: "Sheet1!A1:E500",
         }),
       ]);
 
