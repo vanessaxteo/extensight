@@ -1,9 +1,62 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Routes, Route, Outlet } from 'react-router-dom';
 import Sidebar from "../components/sidebar/Sidebar";
 import SheetVisualizer from "../components/SheetsChart";
 
 export default function Dashboard() {
+  const [summaryData, setSummaryData] = useState(null);
+  // const secretKey = process.env.DASHBOARD_SECRETKEY;
+  // console.log("Loaded API Key:", secretKey);
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const [rosterRes, extensionsRes, examsRes] = await Promise.all([
+          fetch("/data/roster.csv"),
+          fetch("/data/extensions.csv"),
+          fetch("/data/exam_dates.csv"),
+        ]);
+
+        const [rosterText, extensionsText, examsText] = await Promise.all([
+          rosterRes.text(),
+          extensionsRes.text(),
+          examsRes.text(),
+        ]);
+
+        // import fetch from 'node-fetch'; // for node.js
+
+        const dashboardKey = process.env.REACT_APP_DASHBOARD;
+        console.log("FULL ENV:", process.env);
+        console.log("DASHBOARD:", process.env.REACT_APP_DASHBOARD); 
+
+        const res = await fetch(
+          'https://noggin.rea.gent/big-mink-8289',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${dashboardKey}`,
+            },
+            body: JSON.stringify({
+              // fill variables here.
+              "student_roster": rosterText,
+              "extensions": extensionsText,
+              "exam_dates": examsText,
+            }),
+          }
+        );
+
+        const json = await res.json();
+        setSummaryData(json);
+        console.log("Received data:", json);  // Check the API response
+      } catch (err) {
+        console.error("Noggin fetch error:", err);
+      }
+    };
+
+    fetchSummary();
+  }, []);
+
   return (
     <div style={{ display: "flex" }}>
       <Sidebar />
@@ -19,38 +72,45 @@ export default function Dashboard() {
             </div>
             <div class="summary-content" id="summaryContent">
               {/* FILL IN THE BLANKS */}
-              <p class="summary-text">
-                In the past month, there were a total of <strong>__</strong> extensions (<strong>UP/DOWN __ </strong> from last month), where
-                <strong> __</strong> were approved, <strong>__ (__%)</strong> were flagged with high frequency requests.
+              <p className="summary-text">
+                {summaryData ? (
+                  <span>
+                    In the past month, there were a total of <strong>{summaryData.total_extensions}</strong> extensions (
+                    <strong>{summaryData.plus_minus}</strong> from last month), where
+                    <strong> {summaryData.approved}</strong> were approved,
+                    <strong> {summaryData.flagged} ({summaryData.flagged_percent}%)</strong> were flagged with high frequency requests.
+                  </span>
+                ) : "Loading summary..."}
               </p>
+              
 
               {/* Gray info-box, modify with summaries powered by Noggin! */}
               <div class="info-box">
                 <div class="info-section">
                   <h3>Assignments of Concern</h3>
-                  <ul>
-                    <li>
-                      HW3 had <strong>25 (12.5%)</strong> extension requests, a <strong>40%</strong> increase compared to other HWs.
-                    </li>
-                  </ul>
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: (summaryData?.assignments_of_concern || "No assignment concern data available.").replace(/\n/g, "<br />"),
+                    }}
+                  />
                 </div>
 
                 <div class="info-section">
                   <h3>Student Risk Overview</h3>
-                  <ul>
-                    <li>
-                      <strong>7 (3.5%) students</strong> requested <strong> more than 3</strong> extensions this month.
-                    </li>
-                  </ul>
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: (summaryData?.student_risk || "No assignment concern data available.").replace(/\n/g, "<br />"),
+                    }}
+                  />
                 </div>
 
                 <div class="info-section">
                   <h3>Assignment Conflict Overview</h3>
-                  <ul>
-                    <li>
-                      Project 3 deadline (March 25) conflicts with Midterm 2 (March 25). Consider moving to March 27.
-                    </li>
-                  </ul>
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: (summaryData?.assignment_conflict_overview || "No assignment concern data available.").replace(/\n/g, "<br />"),
+                    }}
+                  />
                 </div>
                 
                 {/* ADD NEW "info-section" div for each summary! */}

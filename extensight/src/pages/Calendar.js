@@ -6,8 +6,8 @@ export default function Calendar() {
   return (
     <div style={{ display: "flex" }}>
       <Sidebar />
-      <main style={{ flexGrow: 1, padding: "1rem" }}>
-        <p> Calendar </p>
+      <main style={{ flexGrow: 1, padding: "2rem" }}>
+        <h1>Calendar</h1>
       </main>
     </div>
   );
