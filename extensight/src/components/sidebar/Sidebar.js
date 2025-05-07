@@ -16,7 +16,6 @@ const navItems = [
   // { text: "AI Suggestion", icon: <AutoAwesome />, path: "/aisuggestion" },
   { text: "Assignments", icon: <EventNote />, path: "/assignments" },
   // { text: "Calendar", icon: <Today />, path: "/calendar" },
-  { text: "Settings", icon: <Settings />, path: "/settings" },
 ];
 
 export default function Sidebar() {

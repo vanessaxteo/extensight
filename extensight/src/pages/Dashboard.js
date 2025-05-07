@@ -35,7 +35,7 @@ export default function Dashboard() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${dashboardKey}`,
+              Authorization: `Bearer rg_v1_szmjqowvgdck4rlft9amh05tgos3u7rku7uc_ngk`,
             },
             body: JSON.stringify({
               // fill variables here.
