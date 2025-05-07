@@ -11,16 +11,18 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchSummary = async () => {
       try {
-        const [rosterRes, extensionsRes, examsRes] = await Promise.all([
+        const [rosterRes, extensionsRes, examsRes, assignmentRes] = await Promise.all([
           fetch("/data/roster.csv"),
           fetch("/data/extensions.csv"),
           fetch("/data/exam_dates.csv"),
+          fetch("/data/assignments.csv")
         ]);
 
-        const [rosterText, extensionsText, examsText] = await Promise.all([
+        const [rosterText, extensionsText, examsText, assignmentText] = await Promise.all([
           rosterRes.text(),
           extensionsRes.text(),
           examsRes.text(),
+          assignmentRes.text()
         ]);
 
         // import fetch from 'node-fetch'; // for node.js
@@ -35,13 +37,14 @@ export default function Dashboard() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer rg_v1_szmjqowvgdck4rlft9amh05tgos3u7rku7uc_ngk`,
+              Authorization: 'Bearer rg_v1_xmk54x0rhfpxlgcfbozcurf9jhanw9mv266p_ngk',
             },
             body: JSON.stringify({
               // fill variables here.
               "student_roster": rosterText,
               "extensions": extensionsText,
               "exam_dates": examsText,
+              "assignments": assignmentText
             }),
           }
         );
