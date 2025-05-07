@@ -85,37 +85,43 @@ export default function Dashboard() {
               
 
               {/* Gray info-box, modify with summaries powered by Noggin! */}
-              <div class="info-box">
-                <div class="info-section">
-                  <h3>Assignments of Concern</h3>
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: (summaryData?.assignments_of_concern || "No assignment concern data available.").replace(/\n/g, "<br />"),
-                    }}
-                  />
-                </div>
+              {summaryData ? (
+                <div class="info-box">
+                  <div class="info-section">
+                    <h3>Assignments of Concern</h3>
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: (summaryData?.assignments_of_concern || "No assignment concern data available.").replace(/\n/g, "<br />"),
+                      }}
+                    />
+                  </div>
 
-                <div class="info-section">
-                  <h3>Student Risk Overview</h3>
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: (summaryData?.student_risk || "No assignment concern data available.").replace(/\n/g, "<br />"),
-                    }}
-                  />
-                </div>
+                  <div class="info-section">
+                    <h3>Student Risk Overview</h3>
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: (summaryData?.student_risk || "No assignment concern data available.").replace(/\n/g, "<br />"),
+                      }}
+                    />
+                  </div>
 
-                <div class="info-section">
-                  <h3>Assignment Conflict Overview</h3>
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: (summaryData?.assignment_conflict_overview || "No assignment concern data available.").replace(/\n/g, "<br />"),
-                    }}
-                  />
-                </div>
+                  <div class="info-section">
+                    <h3>Assignment Conflict Overview</h3>
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: (summaryData?.assignment_conflict_overview || "No assignment concern data available.").replace(/\n/g, "<br />"),
+                      }}
+                    />
+                  </div>
+                  
+                  {/* ADD NEW "info-section" div for each summary! */}
                 
-                {/* ADD NEW "info-section" div for each summary! */}
-              
-              </div>
+                </div>
+              ) : (
+                <div class="info-box loading">
+                  <p>Loading insights...</p>
+                </div>
+              )}
 
               {/* Suggested Actions */}
               <div class="suggested-actions">
