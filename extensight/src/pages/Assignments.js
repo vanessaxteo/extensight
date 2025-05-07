@@ -173,6 +173,7 @@ export default function Assignments() {
               <TableRow>
                 <TableCell>Assignment</TableCell>
                 <TableCell>Due Date</TableCell>
+                <TableCell>Action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -194,6 +195,11 @@ export default function Assignments() {
                 >
                   <TableCell>{assignment.name}</TableCell>
                   <TableCell>{assignment.due_date}</TableCell>
+                  <TableCell>
+                    <Button>
+                      View Extension Requests
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
