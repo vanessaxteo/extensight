@@ -1,3 +1,16 @@
+# Login Credentials
+You will be prompted to login to Google with a Google account. Please use the credentials provided:
+Email: cs160groupk@gmail.com
+Password: KnowledgeKnights123
+
+# Importing Google Sheets
+We've created sample google sheets based off of CS61B and CS162's extension request forms, bCourses' roster export, and DSP AIM's roster export.
+Here are the provided sheet links to copy and paste into the login page:
+Roster: https://docs.google.com/spreadsheets/d/1QG3F4nZJPl18tIltbflfdkoVbh4LJxxkxh_FNwCzP0o/edit?usp=sharing
+DSP: https://docs.google.com/spreadsheets/d/1wbkGnpcB8v7ZosUtR-CRRWyeM5G2EZA3PPs_ej4_-98/edit?usp=sharing
+Extensions: https://docs.google.com/spreadsheets/d/1hkJnKDfxfFiZPLlC43yDiVZdhj1zB6Dy5z1Fh3Z4j0g/edit?usp=sharing
+Assignments: https://docs.google.com/spreadsheets/d/12v_wLKmF0YKMcntS7T7nptQwtk0-aveYySCZQLFQw6k/edit?usp=sharing
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
