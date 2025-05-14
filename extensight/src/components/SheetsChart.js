@@ -93,7 +93,7 @@ export default function SheetVisualizer({ sheetUrl, range = "Sheet1!A1:Z100" }) 
       } else {
         const tokenClient = window.google.accounts.oauth2.initTokenClient({
           client_id: "189937528489-6nrjdp52eohmoposc8t31ggkts7sk5nr.apps.googleusercontent.com",
-          scope: "https://www.googleapis.com/auth/spreadsheets.readonly",
+          scope: "https://www.googleapis.com/auth/spreadsheets",
           callback: (tokenResponse) => {
             gapi.client.setToken({ access_token: tokenResponse.access_token });
             localStorage.setItem("token", tokenResponse.access_token);
